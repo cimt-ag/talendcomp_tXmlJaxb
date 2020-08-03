@@ -5,16 +5,16 @@
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
     <version>2.30</version>
-    
+
     <issueManagement>
         <system>GitHub</system>
         <url>https://github.com/jlolling/talendcomp_tXmlJaxb/issues</url>
     </issueManagement>
-    
+
     <scm>
         <developerConnection>scm:git:https://github.com/jlolling/talendcomp_tXmlJaxb.git</developerConnection>
     </scm>
-    
+
     <build>
         <plugins>
             <plugin>
@@ -60,7 +60,7 @@
                         </goals>
                     </execution>
                 </executions>
-            </plugin> 
+            </plugin>
             <plugin>
                 <groupId>de.cimt.talendcomp</groupId>
                 <artifactId>cimt-talendcomp-maven-plugin</artifactId>
@@ -122,7 +122,7 @@
             <groupId>log4j</groupId>
             <artifactId>log4j</artifactId>
             <version>1.2.17</version>
-            <scope>provided</scope>
+            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>org.colllib</groupId>
