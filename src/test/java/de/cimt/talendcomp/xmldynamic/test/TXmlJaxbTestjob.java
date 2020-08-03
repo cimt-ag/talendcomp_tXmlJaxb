@@ -11,9 +11,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.apache.log4j.BasicConfigurator;
-import org.apache.log4j.Level;
-import org.apache.log4j.Logger;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -26,6 +23,8 @@ import de.cimt.talendcomp.xmldynamic.ReflectUtil;
 import de.cimt.talendcomp.xmldynamic.TXMLObject;
 import de.cimt.talendcomp.xmldynamic.Util;
 import de.cimt.talendcomp.xmldynamic.XJCOptions;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class TXmlJaxbTestjob {
 	
@@ -35,9 +34,8 @@ public class TXmlJaxbTestjob {
 	
 	@Before
 	public void testCreateModel() throws Exception {
-		BasicConfigurator.configure();
-		Logger rootLogger = Logger.getRootLogger();
-		rootLogger.setLevel(Level.DEBUG);
+		Logger rootLogger = Logger.getLogger("de.cimt.talendcomp.xmldynamic.test");
+		rootLogger.setLevel(Level.CONFIG);
 		if (classesLoaded == false) {
 			String classRootPath = "./target/generated-sources/modelbuilder/";
 			File classRootPathFile = new File(classRootPath);

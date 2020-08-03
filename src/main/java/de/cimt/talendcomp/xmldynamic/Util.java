@@ -1,5 +1,8 @@
 package de.cimt.talendcomp.xmldynamic;
 
+import de.cimt.talendcomp.xmldynamic.annotations.Jetcode;
+import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
+import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
 import java.io.File;
 import java.io.InputStream;
 import java.io.StringReader;
@@ -21,23 +24,62 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
-
-import org.osgi.framework.BundleReference;
-
-import de.cimt.talendcomp.xmldynamic.annotations.Jetcode;
-import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
-import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
+import org.eclipse.osgi.internal.loader.BundleLoader;
+import org.eclipse.osgi.internal.loader.ModuleClassLoader;
 
 public final class Util {
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
-    private static final ClassLoader LOADER;
+    private static final URLClassLoader LOADER;
     private static final Method METH;
     private static final List<TXMLBinding> BINDINGS;
     public static final boolean OSGI;
 
+    static class OSGIClassLoader extends URLClassLoader{
+        private final BundleLoader osgiLoader;
+
+        public OSGIClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
+            super(urls, parent);
+            this.osgiLoader=loader;
+        }
+
+        public OSGIClassLoader(ClassLoader parent, BundleLoader loader) {
+            super(new URL[]{},  parent);
+            this.osgiLoader=loader;
+        }
+
+        private synchronized Class performBundleLookup(String name) throws ClassNotFoundException{
+            if(osgiLoader==null)
+                throw new ClassNotFoundException();
+            Class<?> clazz=osgiLoader.findClass(name);
+            super.addURL( clazz.getProtectionDomain().getCodeSource().getLocation() );
+            return clazz;
+        }
+
+        @Override
+        public Class<?> loadClass(final String name) throws ClassNotFoundException, NoClassDefFoundError {
+            Throwable ex=null;
+            try{
+                return super.loadClass(name, true);
+            }catch(ClassNotFoundException | java.lang.NoClassDefFoundError cnfe){
+                try{
+                    return performBundleLookup(name);
+                }catch(Throwable t){
+                    throw cnfe;
+                }
+            }
+        }
+
+        @Override
+        protected void addURL(URL url) {
+//            LOG.warn("add url "+url);
+            super.addURL(url);
+        }
+    }
+
     public static void printClassLoader(ClassLoader classLoader) {
         printClassLoader(classLoader, true);
     }
+
     public static void printClassLoader(ClassLoader classLoader, boolean showparent) {
 
         if (null == classLoader) {
@@ -58,35 +100,54 @@ public final class Util {
         LOG.info("--------------------");
     }
 
-
-    static
-    {
-        Method method=null;
+    static{
+        Method m;
         boolean isOSGI=false;
-        ClassLoader classLoader=null;
+        URLClassLoader cl=null;
         try{
-        	isOSGI = Util.class.getClassLoader() instanceof BundleReference;
-        	if(!isOSGI)
-        	{
-                classLoader=(URLClassLoader) Util.class.getClassLoader();
-                method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
-                method.setAccessible(true);
+            m = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
+            m.setAccessible(true);
+
+            try{
+
+                cl=(URLClassLoader) Util.class.getClassLoader();
+            }catch(ClassCastException cce){
+                // regular classloaders normally don't cause this exception
+                final String clName=Util.class.getClassLoader().getClass().getName().toLowerCase();
+                BundleLoader bundleLoader;
+                try{
+                     bundleLoader =  ((ModuleClassLoader) Util.class.getClassLoader()).getBundleLoader();
+                     isOSGI=true;
+                }catch(Throwable t){
+                     bundleLoader = null;
+                }
+                cl=new OSGIClassLoader( Util.class.getClassLoader(), bundleLoader );
+                Thread.currentThread().setContextClassLoader( cl );
             }
+
         }catch(Throwable t){
             LOG.log(Level.SEVERE, "failed to init environment",t);
-            method=null;
+            m=null;
         }
-        OSGI = isOSGI;
-        BINDINGS = new ArrayList<TXMLBinding>();
-        LOG.info("OSGI = " + OSGI);
-        METH = method;
-        LOG.info("METHOD = " + METH);
-        LOADER = classLoader;
+        /**
+         * when osgi class is of type moduleclassloader and nested classloader doesn't use parent classload for resolving
+         * to avoid this problem a colcal classloader must be used
+         */
+
+        OSGI=isOSGI;
+        BINDINGS= new ArrayList<TXMLBinding>();
+        LOG.info("OSGI = "+OSGI);
+        METH=m;
+        LOG.info("METHOD = "+METH);
+        LOADER=cl;
     }
 
     private static Iterator<TXMLBinding> load(){
         // maybe serviceloader should only build once and reloaded when changes are made by loading a model
-        return ServiceLoader.load(de.cimt.talendcomp.xmldynamic.TXMLBinding.class, Util.class.getClassLoader()).iterator();
+        if(!OSGI){
+            return ServiceLoader.load(de.cimt.talendcomp.xmldynamic.TXMLBinding.class).iterator();
+        }
+        return BINDINGS.iterator();
     }
 
     public static TXMLObject createTXMLObject(String name) throws Exception{
@@ -113,7 +174,7 @@ public final class Util {
         try{
             METH.invoke(LOADER, new Object[]{uri.toURL()});
         }catch(Throwable t){
-        	LOG.log(Level.SEVERE, "adding class failed",t);
+            LOG.log(Level.SEVERE, "adding class failed",t);
         }
 
         InputStream in=null;
@@ -141,7 +202,6 @@ public final class Util {
             if(in!=null)
                 in.close();
         }
-
     }
 
     public static String buildSQLInClause(Collection<? extends Object> keys) {
@@ -397,6 +457,7 @@ public final class Util {
     public static String uniqueString() {
         return UUID.randomUUID().toString().replaceAll("[:\\.-]+", "");
     }
+
 	public static boolean isOsgi()
 	{
 		return OSGI;

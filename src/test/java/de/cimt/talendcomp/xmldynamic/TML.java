@@ -2,8 +2,6 @@ package de.cimt.talendcomp.xmldynamic;
 
 import java.io.File;
 
-import org.apache.log4j.BasicConfigurator;
-
 import com.sun.codemodel.JCodeModel;
 
 /**
@@ -14,7 +12,6 @@ public class TML {
 
 	public static void main(String[] args) throws Exception {
 		
-		BasicConfigurator.configure();
 		play_read();
 	}
 	
