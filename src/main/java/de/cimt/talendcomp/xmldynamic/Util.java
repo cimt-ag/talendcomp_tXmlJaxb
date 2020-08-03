@@ -17,12 +17,13 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ServiceLoader;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
-import org.apache.log4j.Logger;
 import org.eclipse.osgi.internal.loader.BundleLoader;
 import org.eclipse.osgi.internal.loader.ModuleClassLoader;
 
@@ -32,7 +33,7 @@ public final class Util {
     private static final Method METH;
     private static final List<TXMLBinding> BINDINGS;
     public static final boolean OSGI;
-    
+
     static class OSGIClassLoader extends URLClassLoader{
         private final BundleLoader osgiLoader;
         public OSGIClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
@@ -43,7 +44,7 @@ public final class Util {
             super(new URL[]{},  parent);
             this.osgiLoader=loader;
         }
-        
+
         private synchronized Class performBundleLookup(String name) throws ClassNotFoundException{
             if(osgiLoader==null)
                 throw new ClassNotFoundException();
@@ -71,33 +72,33 @@ public final class Util {
 //            LOG.warn("add url "+url);
             super.addURL(url);
         }
-        
+
     }
-    
+
     public static void printClassLoader(ClassLoader classLoader) {
         printClassLoader(classLoader, true);
     }
     public static void printClassLoader(ClassLoader classLoader, boolean showparent) {
-        
+
         if (null == classLoader) {
             return;
         }
         LOG.info("--------------------");
-        LOG.info(classLoader);
+        LOG.info(classLoader.toString());
         if (classLoader instanceof URLClassLoader) {
             URLClassLoader ucl = (URLClassLoader) classLoader;
             int i = 0;
             for (URL url : ucl.getURLs()) {
                 LOG.info("url[" + (i++) + "]=" + url);
             }
-            
+
         }
         if(showparent)
             printClassLoader(classLoader.getParent());
         LOG.info("--------------------");
     }
 
-    
+
     static{
         Method m;
         boolean isOSGI=false;
@@ -105,9 +106,9 @@ public final class Util {
         try{
             m = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
             m.setAccessible(true);
-            
+
             try{
-                
+
                 cl=(URLClassLoader) Util.class.getClassLoader();
             }catch(ClassCastException cce){
                 // regular classloaders normally don't cause this exception
@@ -123,16 +124,16 @@ public final class Util {
                 Thread.currentThread().setContextClassLoader( cl );
             }
 
-            
+
         }catch(Throwable t){
-            LOG.error("failed to init environment",t);
+            LOG.log(Level.SEVERE, "failed to init environment",t);
             m=null;
         }
         /**
          * when osgi class is of type moduleclassloader and nested classloader doesn't use parent classload for resolving
-         * to avoid this problem a colcal classloader must be used 
+         * to avoid this problem a colcal classloader must be used
          */
-        
+
         OSGI=isOSGI;
         BINDINGS= new ArrayList<TXMLBinding>();
         LOG.info("OSGI = "+OSGI);
@@ -148,18 +149,18 @@ public final class Util {
         }
         return BINDINGS.iterator();
     }
-    
+
     public static TXMLObject createTXMLObject(String name) throws Exception{
         try {
             return ((Class<TXMLObject>) findClass(name)).newInstance();
         } catch (Exception ex) {
-            LOG.error("Error instantiating class "+name, ex);
+        	LOG.log(Level.SEVERE, "Error instantiating class "+name, ex);
             throw ex;
         }
     }
-    
+
     public static Class<?> findClass(String name) throws ClassNotFoundException{
-        return LOADER.loadClass(name);        
+        return LOADER.loadClass(name);
     }
 
     static void register(URI uri, boolean jar) throws Exception{
@@ -169,11 +170,11 @@ public final class Util {
         } else {
             serviceuri=uri.resolve((jar ? "!/" : "./")+"META-INF/services/de.cimt.talendcomp.xmldynamic.TXMLBinding");
         }
-        
+
         try{
             METH.invoke(LOADER, new Object[]{uri.toURL()});
         }catch(Throwable t){
-            LOG.error("adding class failed",t);
+        	LOG.log(Level.SEVERE, "adding class failed",t);
         }
 
         InputStream in=null;
@@ -188,12 +189,12 @@ public final class Util {
             String[] names = buf.toString().split("\n");
             for (int i = 0, max = names.length; i < max; i++) {
                 final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.warn("lookup service "+value);
+                LOG.warning("lookup service "+value);
                 if(value.length()==0)
                     continue;
                 if(OSGI){
                     TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
-                    LOG.warn("bindingInstance="+bindingInstance);
+                    LOG.warning("bindingInstance="+bindingInstance);
                     BINDINGS.add( bindingInstance );
                 }
             }
@@ -201,7 +202,7 @@ public final class Util {
             if(in!=null)
                 in.close();
         }
-        
+
     }
 
     public static String buildSQLInClause(Collection<? extends Object> keys) {
@@ -266,10 +267,10 @@ public final class Util {
                         builder.append(ref.type().getName());
                         first=false;
                     }
-                    builder.append(">"); 
+                    builder.append(">");
                 }
             }
-            
+
             builder.append("\n");
         }
         builder.append("\n----------------------------\n");
@@ -310,10 +311,10 @@ public final class Util {
 
     public static Class<TXMLObject> findClassFor(QName qn) throws JAXBException {
         final Iterator<TXMLBinding> iterator = load();
-        while (iterator.hasNext()) 
+        while (iterator.hasNext())
         {
             TXMLBinding bind=iterator.next();
-            
+
             final Class<TXMLObject> impl = bind.find(qn);
             if(impl!=null){
                 return impl;

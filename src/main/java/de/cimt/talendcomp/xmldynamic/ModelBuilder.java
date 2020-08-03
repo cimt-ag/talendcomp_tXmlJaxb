@@ -12,7 +12,6 @@ import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
-import org.apache.log4j.Logger;
 import org.xml.sax.SAXParseException;
 
 import com.sun.codemodel.JClass;
@@ -30,6 +29,8 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.StringTokenizer;
 import java.util.jar.JarFile;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticListener;
 import javax.tools.StandardLocation;
@@ -41,14 +42,14 @@ import javax.tools.StandardLocation;
  * various sources.
  *
  * @author Daniel Koch (daniel.koch@cimt-ag.de)
- * 
+ *
  */
 public final class ModelBuilder {
 
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final Set<String> MODELS = new HashSet<String>();
-    public static final Object LOCK = new Object(); 
-    
+    public static final Object LOCK = new Object();
+
     public static boolean isModelAlreadyBuild(String grammarFilePath) {
     	if (grammarFilePath == null) {
             // when grammarFilePath is null then the model should be empty and is available, or? so reture true must be ok
@@ -56,7 +57,7 @@ public final class ModelBuilder {
     	}
     	return MODELS.contains(new File(grammarFilePath).getAbsolutePath());
     }
-    
+
     public static boolean isModelAlreadyBuild(File grammarFile) {
     	if (grammarFile == null) {
             // when grammarFilePath is null then the model should be empty and is available, or? so reture true must be ok
@@ -64,26 +65,26 @@ public final class ModelBuilder {
     	}
     	return MODELS.contains(grammarFile.getAbsolutePath());
     }
- 
+
     private static final ErrorReceiver ERR = new ErrorReceiver() {
         @Override
         public void error(SAXParseException saxpe) throws AbortException {
-            LOG.error(saxpe.getMessage(), saxpe);
+        	LOG.log(Level.SEVERE, saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void fatalError(SAXParseException saxpe) throws AbortException {
-            LOG.fatal(saxpe.getMessage(), saxpe);
+        	LOG.log(Level.SEVERE, saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void warning(SAXParseException saxpe) throws AbortException {
-            LOG.warn(saxpe.getMessage(), saxpe);
+            LOG.log(Level.WARNING, saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void info(SAXParseException saxpe) {
-            LOG.info(saxpe.getMessage(), saxpe);
+            LOG.log(Level.INFO, saxpe.getMessage(), saxpe);
         }
     };
 
@@ -91,18 +92,18 @@ public final class ModelBuilder {
     @SuppressWarnings("unused")
 	private final ErrorReceiverFilter errorReceiver;
     private final JCodeModel codeModel;
- 
+
     public ModelBuilder(XJCOptions _opt) {
         this(_opt, null);
     }
-    
+
     public ModelBuilder(XJCOptions _opt, JCodeModel _codeModel) {
         this.opt = _opt;
         opt.pluginURIs.add( InlineSchemaPlugin.PNS.getNamespaceURI() );
         opt.activePlugins.add( new InlineSchemaPlugin() );
         codeModel = (_codeModel != null ? _codeModel : new JCodeModel());
         if (opt.compatibilityMode != 2) {
-            LOG.warn(Messages.format(Messages.COMPATIBILITY_REQUIRED, ""));
+            LOG.warning(Messages.format(Messages.COMPATIBILITY_REQUIRED, ""));
             opt.compatibilityMode = 2;
         }
         // @FIXME:aufräumen
@@ -116,48 +117,48 @@ public final class ModelBuilder {
     /**
      * @param _opt
      * @param model
-     * @throws Exception 
+     * @throws Exception
      * @deprecated: model is not used any more
      */
     public static void generate(XJCOptions _opt, JCodeModel model) throws Exception {
-        new ModelBuilder(_opt).generate();   
+        new ModelBuilder(_opt).generate();
     }
-    
+
     public static void generate(XJCOptions _opt) throws Exception {
-        new ModelBuilder(_opt).generate();        
+        new ModelBuilder(_opt).generate();
     }
-    
+
     private boolean testUpdateRequired(){
         if (opt.forceGenerate || opt.targetDir == null || !opt.targetDir.exists() ) {
             return true;
         }
         if (opt.createJar) {
             if ( opt.jarFilePath==null) {
-                LOG.debug("No Model found, build is required.");
+                LOG.fine("No Model found, build is required.");
                 return true;
             }
             final File jar=new File(opt.jarFilePath);
-            
+
             if (!jar.exists() || jar.lastModified() < opt.newestGrammar) {
-                LOG.debug("Grammar is newer than generated Model, build is required.");
+                LOG.fine("Grammar is newer than generated Model, build is required.");
                 return true;
             }
         } else {
-            final List<File> listFiles = listFiles(opt.targetDir, true, "TXMLBinding");    
+            final List<File> listFiles = listFiles(opt.targetDir, true, "TXMLBinding");
             if (listFiles.isEmpty()) {
-                LOG.debug("No Model found, build is required.");
+                LOG.fine("No Model found, build is required.");
                 return true;
             }
             for (File f : listFiles) {
                 if (f.lastModified()<opt.newestGrammar) {
-                    LOG.debug("Grammar is newer than generated Model, build is required.");
+                    LOG.fine("Grammar is newer than generated Model, build is required.");
                     return true;
                 }
             }
         }
         return false;
     }
-    
+
     public synchronized boolean compile(boolean extendClasspath) {
 //        final String classNotFound = "package de.cimt.talendcomp.xmldynamic does not exist";
         JavaCompiler jc;
@@ -171,7 +172,7 @@ public final class ModelBuilder {
             String message = "Cannot access the javac compiler. Take care you use a JDK instead of a JRE.\n"
                     + "java.home: " + System.getProperty("java.home") + "\n"
                     + "java.class.path: " + System.getProperty("java.class.path");
-            LOG.error(message);
+            LOG.log(Level.SEVERE, message);
             throw new IllegalStateException(message);
         }
 
@@ -183,10 +184,10 @@ public final class ModelBuilder {
 
                 switch (diagnostic.getKind()) {
                     case ERROR:
-                        LOG.error(msg);
+                    	LOG.log(Level.SEVERE, msg);
                         break;
                     case WARNING:
-                        LOG.warn(msg);
+                        LOG.warning(msg);
                         break;
                     default:
                         LOG.info(msg);
@@ -227,11 +228,11 @@ public final class ModelBuilder {
                     throw new RuntimeException(ex);
                 }
             });
-            
+
             try {
                 sjfm.setLocation(StandardLocation.CLASS_PATH, files);
             } catch (IOException ex) {
-                LOG.error("error extending classpath");
+            	LOG.log(Level.SEVERE, "error extending classpath");
                 return false;
             }
         }
@@ -250,10 +251,10 @@ public final class ModelBuilder {
      * @throws Exception
      */
     public synchronized void generate() throws Exception {
-                
+
         if (!MODELS.contains(opt.grammarFilePath)) {
             LOG.info("Generate Model using Plugin Version "+ XJCOptions.VERSION + "("+XJCOptions.LASTUPDATE+")" );
-            if (testUpdateRequired()) { 
+            if (testUpdateRequired()) {
                 setupModelDir(opt.targetDir);
                 Model model = ModelLoader.load(opt, codeModel, ERR);
                 Outline ouln = model.generateCode(opt, ERR);
@@ -270,8 +271,8 @@ public final class ModelBuilder {
                 if (opt.targetDir == null) {
                     opt.targetDir = createTemporaryFolder();
                 }
-                if (LOG.isDebugEnabled()) {
-                    LOG.debug("Output folder for generated classes: " + opt.targetDir.getAbsolutePath());
+                if (LOG.isLoggable(Level.FINE) ) {
+                    LOG.fine("Output folder for generated classes: " + opt.targetDir.getAbsolutePath());
                 }
                 if (opt.targetDir.exists() == false) {
                     opt.targetDir.mkdirs();
@@ -283,7 +284,7 @@ public final class ModelBuilder {
                 if (!opt.compileSource) {
                     return;
                 }
-                
+
 //                // fix missing classpath in azul jdk
 //                LOG.fatal( System.getProperty( "java.class.path" ) );
 //                List<JarFile> classpathentries= Arrays.stream(System.getProperty("java.class.path").split(System.getProperty("os.name").toUpperCase().startsWith("WINDOWS ") ? ";" : ":")).map(f -> {
@@ -293,12 +294,12 @@ public final class ModelBuilder {
 //                        throw new RuntimeException(ex);
 //                    }
 //                } ).collect(Collectors.toList());
-//                
+//
                 if(!compile(false))
                     if(!compile(true))
-                        throw new Exception(Messages.COMPILATION_FAILED);                        
-                    
-                
+                        throw new Exception(Messages.COMPILATION_FAILED);
+
+
                 if(opt.createJar){
                     // TODO: there is no check if option jarFilePath is set an valid
                     JarUtil jarBuilder = new JarUtil();
@@ -308,19 +309,19 @@ public final class ModelBuilder {
                     jarBuilder.create();
                 }
             }
-            
+
             MODELS.add(opt.grammarFilePath);
             if (!opt.extendClasspath) {
                 return;
             }
             URI uri= (opt.createJar && opt.jarFilePath!=null) ? new File(opt.jarFilePath).toURI() : opt.targetDir.toURI();
-            
-            
+
+
             LOG.info("extend Classpath using " + ( (opt.createJar && opt.jarFilePath!=null) ? opt.jarFilePath : opt.targetDir) );
             Util.register(uri, (opt.createJar && opt.jarFilePath!=null) );
-//            
+//
 //            Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
-//            
+//
 //            method.setAccessible(true);
 //            try{
 //                method.invoke((URLClassLoader) ClassLoader.getSystemClassLoader(), new Object[]{uri.toURL()});
@@ -333,9 +334,9 @@ public final class ModelBuilder {
 //            }
 //            URLClassLoader.newInstance(urls, parent)
     	} else {
-            LOG.debug("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
+            LOG.fine("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
     	}
-        
+
     }
 
     public static List<File> listFiles(File root, boolean recursive, String extension) {
@@ -387,9 +388,9 @@ public final class ModelBuilder {
     public static void info(String message) {
     	LOG.info(message);
     }
-    
+
     public static void debug(String message) {
-    	LOG.debug(message);
+    	LOG.fine(message);
     }
-    
+
 }

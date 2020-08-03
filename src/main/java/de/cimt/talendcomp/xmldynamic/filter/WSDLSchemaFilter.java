@@ -8,6 +8,7 @@ import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.logging.Level;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -69,7 +70,7 @@ public class WSDLSchemaFilter extends BaseFilter {
                     transform.startPrefixMapping(mapping.getKey(), mapping.getValue());
                 }
             } catch (TransformerConfigurationException ex) {
-                LOG.error(ex.getLocalizedMessage(), ex);
+            	LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
             }
         }
         super.startElement(uri, localName, qName, atts);
@@ -104,7 +105,7 @@ public class WSDLSchemaFilter extends BaseFilter {
             if (schemas.size() < 1) {
                 super.endDocument();
                 return;
-            } 
+            }
 
             synchronized(this){
                 final Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -120,7 +121,7 @@ public class WSDLSchemaFilter extends BaseFilter {
                 }
 
                 super.endDocument();
-             
+
             }
         } catch (Exception ex) {
             throw new RuntimeException(ex);

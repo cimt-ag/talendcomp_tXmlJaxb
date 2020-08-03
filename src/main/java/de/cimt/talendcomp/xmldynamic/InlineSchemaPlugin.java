@@ -7,10 +7,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.xml.namespace.QName;
 
-import org.apache.log4j.Logger;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
 
@@ -53,7 +54,7 @@ import org.colllib.factories.Factory;
  */
 public class InlineSchemaPlugin extends Plugin {
 
-    private static final String CODEFRAGMENT=           
+    private static final String CODEFRAGMENT=
         "    @Override\n" +
         "    public java.util.List<Class<TXMLObject>> getClasses(){\n" +
         "        java.util.List<Class<TXMLObject>> classes=new java.util.ArrayList<Class<TXMLObject>>();\n" +
@@ -101,12 +102,12 @@ public class InlineSchemaPlugin extends Plugin {
         "    public boolean isMember(javax.xml.namespace.QName qn){\n" +
         "        return find(qn)!=null;\n" +
         "    }\n" ;
-    
-    
+
+
     public static final QName PNS = new QName("http://xsd.cimt.de/plugins/inline", "_cisp", "_cisp");
-    private static final Logger LOG = Logger.getLogger(InlineSchemaPlugin.class);
+    private static final Logger LOG = Logger.getLogger(InlineSchemaPlugin.class.getName());
     StringBuilder clazzes=new StringBuilder();
-    
+
     @Override
     public String getOptionName() {
         return PNS.getLocalPart();
@@ -146,7 +147,7 @@ public class InlineSchemaPlugin extends Plugin {
                 public JArray create() {
                     return JExpr.newArray(refString);
                 }
-            }  );            
+            }  );
             Map<JPackage, Set<String>> namespaces = new AutoInitMap<JPackage, Set<String>>( new Factory<Set<String>>(){
                 @Override
                 public Set<String> create() {
@@ -155,7 +156,7 @@ public class InlineSchemaPlugin extends Plugin {
             }  );
             Set<JPackage> packages = new HashSet<JPackage>();
             for (Map.Entry<NClass, CClassInfo> beanset : model.beans().entrySet()) {
-                
+
                 CClassInfo bean = beanset.getValue();
                 final JPackage ownerPackage = bean.getOwnerPackage();
                 packages.add(ownerPackage);
@@ -170,8 +171,8 @@ public class InlineSchemaPlugin extends Plugin {
                     t.get(ownerPackage).add(JExpr.dotclass(model.codeModel.ref(bean.fullName())));
                 }
             }
-            
-            StringBuilder sbuild=new StringBuilder(); 
+
+            StringBuilder sbuild=new StringBuilder();
             for(JPackage pack : packages){
                 model.rootClass = refObject;
 
@@ -200,10 +201,10 @@ public class InlineSchemaPlugin extends Plugin {
                 meth = clazz.method(JMod.PUBLIC, refString.array(), "getNamespaces");
                 meth.annotate(java.lang.Override.class);
                 meth.body()._return(n.get(pack));
-                
+
                 clazz.direct( CODEFRAGMENT );
                 sbuild.append( clazz.fullName() ).append("\n");
-               
+
             }
 
 
@@ -211,7 +212,7 @@ public class InlineSchemaPlugin extends Plugin {
             jrf.setContents( sbuild.toString() );//clazz.fullName());
 
         } catch (JClassAlreadyExistsException ex) {
-        	LOG.error(ex);
+        	LOG.log(Level.SEVERE, ex.getMessage(), ex );
         }
 
     }
@@ -252,9 +253,9 @@ public class InlineSchemaPlugin extends Plugin {
             XSTerm term = ((XSParticle) component).getTerm();
             if ( term.isElementDecl() ) {
                 annotateType(term.asElementDecl(), parent, outline, ref);
-                return; 
+                return;
             }
-            
+
             if (term.isModelGroupDecl()) {
                 term = term.asModelGroupDecl();
             }
@@ -266,10 +267,10 @@ public class InlineSchemaPlugin extends Plugin {
             }
         }
     }
-    
+
     @Override
     public boolean run(Outline otln, Options optns, ErrorHandler eh) throws SAXException {
-        
+
         for (ClassOutline co : otln.getClasses()) {
             for (CPropertyInfo property : co.target.getProperties()) {
                 JFieldVar field = co.implClass.fields().get(property.getName(false));
@@ -286,5 +287,5 @@ public class InlineSchemaPlugin extends Plugin {
         return true;
     }
 
-    
+
 }
