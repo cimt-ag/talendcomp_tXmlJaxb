@@ -139,6 +139,7 @@
             <version>4.12</version>
             <scope>test</scope>
         </dependency>
+        <!--
         <dependency>
             <groupId>org.eclipse</groupId>
             <artifactId>osgi</artifactId>
@@ -146,6 +147,7 @@
             <type>jar</type>
             <scope>provided</scope>
         </dependency>
+        -->
         <!--
          TODO: removed until available from mvn repo
         <dependency>

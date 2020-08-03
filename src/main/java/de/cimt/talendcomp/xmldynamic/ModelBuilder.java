@@ -2,17 +2,26 @@ package de.cimt.talendcomp.xmldynamic;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URI;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
 import java.util.Set;
+import java.util.StringTokenizer;
 import java.util.UUID;
+import java.util.jar.JarFile;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import javax.tools.Diagnostic;
+import javax.tools.DiagnosticListener;
 import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 import javax.tools.ToolProvider;
 
-import org.osgi.framework.BundleException;
 import org.xml.sax.SAXParseException;
 
 import com.sun.codemodel.JClass;
@@ -25,16 +34,6 @@ import com.sun.tools.xjc.model.Model;
 import com.sun.tools.xjc.outline.Outline;
 import com.sun.tools.xjc.outline.PackageOutline;
 import com.sun.tools.xjc.util.ErrorReceiverFilter;
-import java.net.URI;
-import java.util.Arrays;
-import java.util.Locale;
-import java.util.StringTokenizer;
-import java.util.jar.JarFile;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-import javax.tools.Diagnostic;
-import javax.tools.DiagnosticListener;
-import javax.tools.StandardLocation;
 
 /**
  * Builds a {@link Model} object.
@@ -256,7 +255,7 @@ public final class ModelBuilder {
     	{
     		String message = "Model generation ist not available in OSGi environment";
     		LOG.severe(message);
-    		throw new BundleException(message, BundleException.INVALID_OPERATION, null);
+    		throw new Exception(message);
     	}
         if (!MODELS.contains(opt.grammarFilePath)) {
             LOG.info("Generate Model using Plugin Version "+ XJCOptions.VERSION + "("+XJCOptions.LASTUPDATE+")" );
