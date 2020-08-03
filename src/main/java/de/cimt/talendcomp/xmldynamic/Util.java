@@ -36,10 +36,12 @@ public final class Util {
 
     static class OSGIClassLoader extends URLClassLoader{
         private final BundleLoader osgiLoader;
+        
         public OSGIClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
             super(urls, parent);
             this.osgiLoader=loader;
         }
+        
         public OSGIClassLoader(ClassLoader parent, BundleLoader loader) {
             super(new URL[]{},  parent);
             this.osgiLoader=loader;
@@ -72,12 +74,12 @@ public final class Util {
 //            LOG.warn("add url "+url);
             super.addURL(url);
         }
-
     }
 
     public static void printClassLoader(ClassLoader classLoader) {
         printClassLoader(classLoader, true);
     }
+    
     public static void printClassLoader(ClassLoader classLoader, boolean showparent) {
 
         if (null == classLoader) {
@@ -97,7 +99,6 @@ public final class Util {
             printClassLoader(classLoader.getParent());
         LOG.info("--------------------");
     }
-
 
     static{
         Method m;
@@ -123,7 +124,6 @@ public final class Util {
                 cl=new OSGIClassLoader( Util.class.getClassLoader(), bundleLoader );
                 Thread.currentThread().setContextClassLoader( cl );
             }
-
 
         }catch(Throwable t){
             LOG.log(Level.SEVERE, "failed to init environment",t);
@@ -174,7 +174,7 @@ public final class Util {
         try{
             METH.invoke(LOADER, new Object[]{uri.toURL()});
         }catch(Throwable t){
-        	LOG.log(Level.SEVERE, "adding class failed",t);
+            LOG.log(Level.SEVERE, "adding class failed",t);
         }
 
         InputStream in=null;
@@ -202,7 +202,6 @@ public final class Util {
             if(in!=null)
                 in.close();
         }
-
     }
 
     public static String buildSQLInClause(Collection<? extends Object> keys) {
