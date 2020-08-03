@@ -12,6 +12,7 @@ import javax.tools.JavaCompiler;
 import javax.tools.StandardJavaFileManager;
 import javax.tools.ToolProvider;
 
+import org.osgi.framework.BundleException;
 import org.xml.sax.SAXParseException;
 
 import com.sun.codemodel.JClass;
@@ -251,7 +252,12 @@ public final class ModelBuilder {
      * @throws Exception
      */
     public synchronized void generate() throws Exception {
-
+    	if(Util.isOsgi())
+    	{
+    		String message = "Model generation ist not available in OSGi environment";
+    		LOG.severe(message);
+    		throw new BundleException(message, BundleException.INVALID_OPERATION, null);
+    	}
         if (!MODELS.contains(opt.grammarFilePath)) {
             LOG.info("Generate Model using Plugin Version "+ XJCOptions.VERSION + "("+XJCOptions.LASTUPDATE+")" );
             if (testUpdateRequired()) {
