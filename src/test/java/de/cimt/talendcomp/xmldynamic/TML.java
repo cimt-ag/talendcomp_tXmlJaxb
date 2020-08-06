@@ -11,10 +11,10 @@ import com.sun.codemodel.JCodeModel;
 public class TML {
 
 	public static void main(String[] args) throws Exception {
-		
+
 		play_read();
 	}
-	
+
 	public static void play_read() throws Exception {
 
 		XJCOptions opts = new XJCOptions();
@@ -22,17 +22,17 @@ public class TML {
 		opts.targetDir.mkdirs();
 		opts.ignoreAnnotations = true;
 		opts.forceGenerate = true;
-		opts.addGrammar(new File("/Volumes/Data/projects/gvl/svn/navi/trunk/TTH/Interfaces/DDEX-MLC-12/music-licensing-companies_original.xsd"));
+		opts.addGrammar(new File("src/test/resources/AtollWS.wsdl"));
 		System.out.println("Generate model...");
 		//ModelBuilder.generate(opts, new JCodeModel());
-		
+
 		ModelBuilder mb = new ModelBuilder(opts, new JCodeModel());
 		mb.generate();
-		
+
 	}
-	
+
 	public static void play_input() throws Exception {
-		
+
 	}
-	
+
 }
