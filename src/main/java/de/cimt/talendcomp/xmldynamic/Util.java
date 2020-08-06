@@ -91,7 +91,7 @@ public final class Util {
     private static boolean runningInOSGi()
     {
 		Class<?> clazz = Util.class.getClassLoader().getClass();
-		for(Class<?> current = clazz; current != null & current.getSuperclass() != current; current = current.getSuperclass())
+		for(Class<?> current = clazz; !Object.class.equals(current); current = current.getSuperclass())
 		{
 			if(current.getName().startsWith("org.osgi"))
 			{

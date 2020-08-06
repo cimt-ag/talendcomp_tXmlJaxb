@@ -1,14 +1,14 @@
-<%@ jet 
+<%@ jet
 	imports="
-		org.talend.core.model.process.INode 
-		org.talend.core.model.process.ElementParameterParser 
+		org.talend.core.model.process.INode
+		org.talend.core.model.process.ElementParameterParser
 		org.talend.designer.codegen.config.CodeGeneratorArgument
-	" 
+	"
 %>
-<% 
+<%
     CodeGeneratorArgument codeGenArgument = (CodeGeneratorArgument) argument;
     INode node = (INode)codeGenArgument.getArgument();
-    String cid = node.getUniqueName();	
+    String cid = node.getUniqueName();
     String xsdFile = ElementParameterParser.getValue(node, "__XSD_FILE__");
     if (xsdFile == null || xsdFile.trim().isEmpty()) {
 		xsdFile = "null";
@@ -19,15 +19,15 @@
     if (jarFilePath == null || jarFilePath.trim().isEmpty()) {
     	 jarFilePath = "null";
     }
-    boolean loadExistingModel = "true".equals(ElementParameterParser.getValue(node, "__ASSUME_MODEL_PRESENT__"));
+    boolean loadExistingModel = "true".equals(ElementParameterParser.getValue(node, "__LOAD_EXISTING_MODEL__"));
     boolean printAbstractClasses = "true".equals(ElementParameterParser.getValue(node, "__PRINTOUT_ABSTRACT_CLASSES__"));
     boolean createGraph = "true".equals(ElementParameterParser.getValue(node, "__PRINTOUT_DOCUMENT_GRAPH__"));
     boolean enableBasicSubstitution = "true".equals(ElementParameterParser.getValue(node, "__PERFORM_TYPE_SUBSTITUTE__"));
     boolean ignoreAnnotations = "true".equals(ElementParameterParser.getValue(node, "__IGNORE_ANNOTATIONS__"));
     boolean forceGenerate = "true".equals(ElementParameterParser.getValue(node, "__FORCE_GENERATE__"));
-    boolean log4jEnabled = "true".equals(org.talend.core.model.process.ElementParameterParser.getValue(node.getProcess(), "__LOG4J_ACTIVATE__")) && 
+    boolean log4jEnabled = "true".equals(org.talend.core.model.process.ElementParameterParser.getValue(node.getProcess(), "__LOG4J_ACTIVATE__")) &&
    							"JOBLET".equals(node.getComponent().getComponentType().toString()) == false;
-    
+
 
     if(!loadExistingModel){
 %>
