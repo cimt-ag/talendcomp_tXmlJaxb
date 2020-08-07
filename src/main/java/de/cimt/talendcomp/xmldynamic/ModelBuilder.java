@@ -301,11 +301,13 @@ public final class ModelBuilder {
 //                    }
 //                } ).collect(Collectors.toList());
 //
-                if(!compile(false))
-                    if(!compile(true))
+                if(!compile(true))
+                {
+                	LOG.info("Try compilation using nested classpath");
+                    if(!compile(false))
                         throw new Exception(Messages.COMPILATION_FAILED);
-
-
+                }
+                LOG.info("Compilation successful");
                 if(opt.createJar){
                     // TODO: there is no check if option jarFilePath is set an valid
                     JarUtil jarBuilder = new JarUtil();

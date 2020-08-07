@@ -118,6 +118,27 @@
 				</executions>
 			</plugin>
 			<plugin>
+				<artifactId>maven-shade-plugin</artifactId>
+				<version>3.2.4</version>
+				<executions>
+					<execution>
+						<phase>package</phase>
+						<goals>
+							<goal>shade</goal>
+						</goals>
+						<configuration>
+							<artifactSet>
+								<includes>
+									<include>org.slf4j:slf4j-log4j12</include>
+									<include>org.slf4j:jcl-over-slf4j</include>
+								</includes>
+							</artifactSet>
+							<createSourcesJar>true</createSourcesJar>
+						</configuration>
+					</execution>
+				</executions>
+			</plugin>
+			<plugin>
 				<groupId>de.cimt.talendcomp</groupId>
 				<artifactId>cimt-talendcomp-maven-plugin</artifactId>
 				<version>2.1</version>
@@ -134,6 +155,7 @@
 						</goals>
 						<configuration>
 							<componentName>tXmlJaxbModel</componentName>
+							<jarExcludePattern>.*slf4j.*</jarExcludePattern>
 						</configuration>
 					</execution>
 					<execution>
@@ -199,11 +221,13 @@
 			<groupId>org.slf4j</groupId>
 			<artifactId>slf4j-api</artifactId>
 			<version>${slf4j.version}</version>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
 			<artifactId>jcl-over-slf4j</artifactId>
 			<version>${slf4j.version}</version>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.slf4j</groupId>
@@ -215,6 +239,7 @@
 					<artifactId>log4j</artifactId>
 				</exclusion>
 			</exclusions>
+			<scope>compile</scope>
 		</dependency>
 		<dependency>
 			<groupId>junit</groupId>
