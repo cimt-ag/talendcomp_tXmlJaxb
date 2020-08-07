@@ -2,6 +2,6 @@
 /nb-configuration.xml
 /nbactions.xml
 /src/main/java/de/cimt/talendcomp/xmldynamic/Testsome.java
-/.classpath
-/.project
-/.settings
+.classpath
+.project
+.settings

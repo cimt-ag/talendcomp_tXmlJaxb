@@ -24,18 +24,18 @@ import de.cimt.talendcomp.xmldynamic.TXMLObject;
 import de.cimt.talendcomp.xmldynamic.Util;
 import de.cimt.talendcomp.xmldynamic.XJCOptions;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class TXmlJaxbTestjob {
-	
+
 	String currentComponent ;
 	Map<String, Object> globalMap = new HashMap<String, Object>();
     private boolean classesLoaded = false;
-	
+
 	@Before
 	public void testCreateModel() throws Exception {
-		Logger rootLogger = Logger.getLogger("de.cimt.talendcomp.xmldynamic.test");
-		rootLogger.setLevel(Level.CONFIG);
+		Logger rootLogger = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic.test");
 		if (classesLoaded == false) {
 			String classRootPath = "./target/generated-sources/modelbuilder/";
 			File classRootPathFile = new File(classRootPath);
@@ -51,7 +51,7 @@ public class TXmlJaxbTestjob {
 			opts.forceGenerate = true;
 			opts.addGrammar(new File(xsdFile.getAbsolutePath()));
 			System.out.println("Generate model...");
-			
+
 			//testen ob das jar file älter als das xsd file
 			if (xsdFile.lastModified() > jarFile.lastModified()) {
 				//wenn älter muss der generate gestartet werden und das jar file neu erstellt werden
@@ -60,13 +60,13 @@ public class TXmlJaxbTestjob {
 				buildJar.setClassFilesRootDir(classRootPath);
 				buildJar.setJarFilePath(jarFilepath);
 				buildJar.create();
-			} 
+			}
 			ModelBuilder.generate(opts, new JCodeModel());
 			Util.printContexts();
 		}
 		classesLoaded = true;
 	}
-	
+
 	@Test
 	public void testLoadCustomerClass() throws Exception {
 		currentComponent = "tXmlJaxbOutput";
@@ -80,7 +80,7 @@ public class TXmlJaxbTestjob {
 		String actual = (String) object.get("name");
 		assertEquals(expected, actual);
 	}
-	
+
 	@Test
 	public void testSetDate() throws Exception {
 		currentComponent = "tXmlJaxbOutput";
@@ -118,7 +118,7 @@ public class TXmlJaxbTestjob {
 		System.out.println(actual);
 		assertEquals(expected, actual);
 	}
-	
+
 	@Test
 	public void testLoadAdressClass() throws Exception {
 		testLoadCustomerClass();
@@ -141,7 +141,7 @@ public class TXmlJaxbTestjob {
 		int actualCount = parent.size("title");
 		assertEquals(expectedCount, actualCount);
 	}
-	
+
 	@Test
 	public void testBuildSQLInClauseFromString() {
 		String expected = "in ('a','b','c')";
@@ -153,7 +153,7 @@ public class TXmlJaxbTestjob {
 		System.out.println(actual);
 		assertTrue("SQL code wrong", expected.equals(actual.trim()));
 	}
-	
+
 	@Test
 	public void testReadCompany() throws Exception {
 		String xml = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
@@ -200,7 +200,7 @@ public class TXmlJaxbTestjob {
 		int countExpected = 2;
 		int countActual = results.size();
 		assertEquals(countExpected, countActual);
-		
+
 	}
 
 }

@@ -3,8 +3,8 @@ package de.cimt.talendcomp.xmldynamic.filter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import java.util.logging.Logger;
-
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.XMLFilterImpl;
 
@@ -14,7 +14,7 @@ import org.xml.sax.helpers.XMLFilterImpl;
  */
 public class BaseFilter extends XMLFilterImpl {
 
-    protected static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    protected static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     protected Map<String, String> prefixmapping = new HashMap<String, String>();
 
     static String toLocalName(String localName, String qName) {

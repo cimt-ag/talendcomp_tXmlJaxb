@@ -43,7 +43,8 @@ import java.util.Locale;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -51,7 +52,7 @@ import java.util.logging.Logger;
  */
 public class XJCOptions extends Options {
 
-    private static final Logger LOG = Logger.getLogger(XJCOptions.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(XJCOptions.class);
     public boolean extendClasspath = true;
     public boolean compileSource = true;
     public boolean casesensitive = false;
@@ -116,12 +117,12 @@ public class XJCOptions extends Options {
         try {
             tmpfile = File.createTempFile("2890374092", "092830198");
         } catch (IOException ex) {
-        	LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+        	LOG.error(ex.getLocalizedMessage(), ex);
             throw new RuntimeException("temp not available");
         }
         tmproot = new File(tmpfile.getParentFile(), Util.uniqueString());
-        if (LOG.isLoggable(Level.FINE)) {
-            LOG.fine("Set tmp-root to: "+tmproot.getAbsolutePath());
+        if (LOG.isDebugEnabled()) {
+            LOG.debug("Set tmp-root to: "+tmproot.getAbsolutePath());
         }
         tmproot.mkdirs();
         tmproot.deleteOnExit();
@@ -260,7 +261,7 @@ public class XJCOptions extends Options {
 
             super.addGrammar( new InMemorySource(w.toString(), alias) );
         } catch (Throwable ex) {
-        	LOG.log(Level.SEVERE, Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
+        	LOG.error(Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
             throw new RuntimeException(Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
         }
     }
@@ -302,8 +303,8 @@ public class XJCOptions extends Options {
             final Transformer transformer = TransformerFactory.newInstance().newTransformer();
             for (InputSource source : super.getGrammars()) {
                 File res = new File(tmproot, ((InMemorySource) source).alias);
-                if (LOG.isLoggable(Level.FINE)) {
-                	LOG.fine("Use as temporary xsd result file: " + res.getAbsolutePath());
+                if (LOG.isDebugEnabled()) {
+                	LOG.debug("Use as temporary xsd result file: " + res.getAbsolutePath());
                 }
                 transformer.transform(
                     new SAXSource(reader, source),
@@ -318,7 +319,7 @@ public class XJCOptions extends Options {
             checksumValue = csf.toString();
             return ng.toArray( new InputSource[ng.size()] );
         } catch (Exception ex) {
-        	LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+        	LOG.error(ex.getLocalizedMessage(), ex);
             throw new RuntimeException(ex);
         }
     }

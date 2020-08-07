@@ -15,7 +15,8 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.UUID;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
@@ -27,7 +28,7 @@ import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
 
 public final class Util {
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final ClassLoader LOADER;
     private static final Method METH;
     private static final List<TXMLBinding> BINDINGS;
@@ -73,7 +74,7 @@ public final class Util {
         		cl = Util.class.getClassLoader();
         	}
         }catch(Throwable t){
-            LOG.log(Level.SEVERE, "failed to init environment",t);
+            LOG.error("failed to init environment",t);
         }
         /**
          * when osgi class is of type moduleclassloader and nested classloader doesn't use parent classload for resolving
@@ -117,7 +118,7 @@ public final class Util {
         try {
             return ((Class<TXMLObject>) findClass(name)).newInstance();
         } catch (Exception ex) {
-        	LOG.log(Level.SEVERE, "Error instantiating class "+name, ex);
+        	LOG.error("Error instantiating class "+name, ex);
             throw ex;
         }
     }
@@ -137,7 +138,7 @@ public final class Util {
         try{
             METH.invoke(LOADER, new Object[]{uri.toURL()});
         }catch(Throwable t){
-            LOG.log(Level.SEVERE, "adding class failed",t);
+            LOG.error("adding class failed",t);
         }
 
         InputStream in=null;
@@ -152,12 +153,12 @@ public final class Util {
             String[] names = buf.toString().split("\n");
             for (int i = 0, max = names.length; i < max; i++) {
                 final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.warning("lookup service "+value);
+                LOG.warn("lookup service "+value);
                 if(value.length()==0)
                     continue;
                 if(OSGI){
                     TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
-                    LOG.warning("bindingInstance="+bindingInstance);
+                    LOG.warn("bindingInstance="+bindingInstance);
                     BINDINGS.add( bindingInstance );
                 }
             }

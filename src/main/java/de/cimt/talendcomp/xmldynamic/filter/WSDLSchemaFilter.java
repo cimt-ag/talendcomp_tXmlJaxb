@@ -70,7 +70,7 @@ public class WSDLSchemaFilter extends BaseFilter {
                     transform.startPrefixMapping(mapping.getKey(), mapping.getValue());
                 }
             } catch (TransformerConfigurationException ex) {
-            	LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+            	LOG.error(ex.getLocalizedMessage(), ex);
             }
         }
         super.startElement(uri, localName, qName, atts);

@@ -21,7 +21,7 @@ public class ChecksumFilter extends BaseFilter {
         try {
             nmd = MessageDigest.getInstance("SHA");
         } catch (NoSuchAlgorithmException ex) {
-            LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
+            LOG.error(ex.getLocalizedMessage(), ex);
         }
         digest = nmd;
     }

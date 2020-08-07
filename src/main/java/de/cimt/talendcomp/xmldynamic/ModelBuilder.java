@@ -13,7 +13,8 @@ import java.util.StringTokenizer;
 import java.util.UUID;
 import java.util.jar.JarFile;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.tools.Diagnostic;
 import javax.tools.DiagnosticListener;
@@ -46,7 +47,7 @@ import com.sun.tools.xjc.util.ErrorReceiverFilter;
  */
 public final class ModelBuilder {
 
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final Set<String> MODELS = new HashSet<String>();
     public static final Object LOCK = new Object();
 
@@ -69,22 +70,22 @@ public final class ModelBuilder {
     private static final ErrorReceiver ERR = new ErrorReceiver() {
         @Override
         public void error(SAXParseException saxpe) throws AbortException {
-        	LOG.log(Level.SEVERE, saxpe.getMessage(), saxpe);
+        	LOG.error(saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void fatalError(SAXParseException saxpe) throws AbortException {
-        	LOG.log(Level.SEVERE, saxpe.getMessage(), saxpe);
+        	LOG.error(saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void warning(SAXParseException saxpe) throws AbortException {
-            LOG.log(Level.WARNING, saxpe.getMessage(), saxpe);
+            LOG.warn( saxpe.getMessage(), saxpe);
         }
 
         @Override
         public void info(SAXParseException saxpe) {
-            LOG.log(Level.INFO, saxpe.getMessage(), saxpe);
+            LOG.info(saxpe.getMessage(), saxpe);
         }
     };
 
@@ -103,7 +104,7 @@ public final class ModelBuilder {
         opt.activePlugins.add( new InlineSchemaPlugin() );
         codeModel = (_codeModel != null ? _codeModel : new JCodeModel());
         if (opt.compatibilityMode != 2) {
-            LOG.warning(Messages.format(Messages.COMPATIBILITY_REQUIRED, ""));
+            LOG.warn(Messages.format(Messages.COMPATIBILITY_REQUIRED, ""));
             opt.compatibilityMode = 2;
         }
         // @FIXME:aufräumen
@@ -134,24 +135,24 @@ public final class ModelBuilder {
         }
         if (opt.createJar) {
             if ( opt.jarFilePath==null) {
-                LOG.fine("No Model found, build is required.");
+                LOG.debug("No Model found, build is required.");
                 return true;
             }
             final File jar=new File(opt.jarFilePath);
 
             if (!jar.exists() || jar.lastModified() < opt.newestGrammar) {
-                LOG.fine("Grammar is newer than generated Model, build is required.");
+                LOG.debug("Grammar is newer than generated Model, build is required.");
                 return true;
             }
         } else {
             final List<File> listFiles = listFiles(opt.targetDir, true, "TXMLBinding");
             if (listFiles.isEmpty()) {
-                LOG.fine("No Model found, build is required.");
+                LOG.debug("No Model found, build is required.");
                 return true;
             }
             for (File f : listFiles) {
                 if (f.lastModified()<opt.newestGrammar) {
-                    LOG.fine("Grammar is newer than generated Model, build is required.");
+                    LOG.debug("Grammar is newer than generated Model, build is required.");
                     return true;
                 }
             }
@@ -172,7 +173,7 @@ public final class ModelBuilder {
             String message = "Cannot access the javac compiler. Take care you use a JDK instead of a JRE.\n"
                     + "java.home: " + System.getProperty("java.home") + "\n"
                     + "java.class.path: " + System.getProperty("java.class.path");
-            LOG.log(Level.SEVERE, message);
+            LOG.error(message);
             throw new IllegalStateException(message);
         }
 
@@ -184,10 +185,10 @@ public final class ModelBuilder {
 
                 switch (diagnostic.getKind()) {
                     case ERROR:
-                    	LOG.log(Level.SEVERE, msg);
+                    	LOG.error(msg);
                         break;
                     case WARNING:
-                        LOG.warning(msg);
+                        LOG.warn(msg);
                         break;
                     default:
                         LOG.info(msg);
@@ -232,7 +233,7 @@ public final class ModelBuilder {
             try {
                 sjfm.setLocation(StandardLocation.CLASS_PATH, files);
             } catch (IOException ex) {
-            	LOG.log(Level.SEVERE, "error extending classpath");
+            	LOG.error("error extending classpath");
                 return false;
             }
         }
@@ -254,7 +255,7 @@ public final class ModelBuilder {
     	if(Util.isOsgi())
     	{
     		String message = "Model generation ist not available in OSGi environment";
-    		LOG.severe(message);
+    		LOG.error(message);
     		throw new Exception(message);
     	}
         if (!MODELS.contains(opt.grammarFilePath)) {
@@ -276,8 +277,8 @@ public final class ModelBuilder {
                 if (opt.targetDir == null) {
                     opt.targetDir = createTemporaryFolder();
                 }
-                if (LOG.isLoggable(Level.FINE) ) {
-                    LOG.fine("Output folder for generated classes: " + opt.targetDir.getAbsolutePath());
+                if (LOG.isDebugEnabled() ) {
+                    LOG.debug("Output folder for generated classes: " + opt.targetDir.getAbsolutePath());
                 }
                 if (opt.targetDir.exists() == false) {
                     opt.targetDir.mkdirs();
@@ -339,7 +340,7 @@ public final class ModelBuilder {
 //            }
 //            URLClassLoader.newInstance(urls, parent)
     	} else {
-            LOG.fine("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
+            LOG.debug("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
     	}
 
     }
@@ -395,7 +396,7 @@ public final class ModelBuilder {
     }
 
     public static void debug(String message) {
-    	LOG.fine(message);
+    	LOG.debug(message);
     }
 
 }

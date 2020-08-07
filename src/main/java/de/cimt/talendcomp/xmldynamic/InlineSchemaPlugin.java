@@ -8,7 +8,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import java.util.logging.Level;
-import java.util.logging.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.xml.namespace.QName;
 
@@ -105,7 +106,7 @@ public class InlineSchemaPlugin extends Plugin {
 
 
     public static final QName PNS = new QName("http://xsd.cimt.de/plugins/inline", "_cisp", "_cisp");
-    private static final Logger LOG = Logger.getLogger(InlineSchemaPlugin.class.getName());
+    private static final Logger LOG = LoggerFactory.getLogger(InlineSchemaPlugin.class);
     StringBuilder clazzes=new StringBuilder();
 
     @Override
@@ -212,7 +213,7 @@ public class InlineSchemaPlugin extends Plugin {
             jrf.setContents( sbuild.toString() );//clazz.fullName());
 
         } catch (JClassAlreadyExistsException ex) {
-        	LOG.log(Level.SEVERE, ex.getMessage(), ex );
+        	LOG.error(ex.getMessage(), ex );
         }
 
     }
