@@ -21,11 +21,13 @@ public class TML {
 	public static void play_read() throws Exception {
 
 		XJCOptions opts = new XJCOptions();
-		opts.targetDir = new File("./target/generated-sources/modelbuilder/");
+		opts.targetDir = new File("./target/generated-test/modelbuilder/");
 		opts.targetDir.mkdirs();
 		opts.ignoreAnnotations = true;
 		opts.forceGenerate = true;
-		opts.addGrammar(new File("/Volumes/Data/projects/gvl/svn/navi/trunk/TTH/Interfaces/DDEX-MLC-12/music-licensing-companies_original.xsd"));
+                opts.compileSource = true;
+                
+		opts.addGrammar(new File("./src/test/resources/company2.xsd"));
 		System.out.println("Generate model...");
 		//ModelBuilder.generate(opts, new JCodeModel());
 		

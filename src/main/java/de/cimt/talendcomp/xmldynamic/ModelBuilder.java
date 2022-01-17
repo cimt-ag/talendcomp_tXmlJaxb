@@ -8,9 +8,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.tools.JavaCompiler;
-import javax.tools.StandardJavaFileManager;
-import javax.tools.ToolProvider;
+import javax.tools.*;
 
 import org.apache.log4j.Logger;
 import org.xml.sax.SAXParseException;
@@ -26,6 +24,8 @@ import com.sun.tools.xjc.outline.Outline;
 import com.sun.tools.xjc.outline.PackageOutline;
 import com.sun.tools.xjc.util.ErrorReceiverFilter;
 import java.net.URI;
+import java.util.Arrays;
+import java.util.Iterator;
 
 /**
  * Builds a {@link Model} object.
@@ -193,11 +193,18 @@ public final class ModelBuilder {
                 }
                 JavaCompiler jc;
                 try{
-                    jc = ToolProvider.getSystemJavaCompiler();
+                    jc = ToolProvider.getSystemJavaCompiler();                    
                 } catch(Throwable t){ // may throw an exception when jre is used
                     jc = null;
                 }
 
+                LOG.info("-------------------------------------------------------------------");
+                LOG.info("-------------------------------------------------------------------");
+                    LOG.info(
+                      "Prepare Compiler.\n"
+                            + "java.home: " + System.getProperty("java.home") + "\n"
+                            + "java.class.path: " + System.getProperty("java.class.path") 
+                            );
                 if (jc == null) {
                     String message = "Cannot access the javac compiler. Take care you use a JDK instead of a JRE.\n"
                             + "java.home: " + System.getProperty("java.home") + "\n"
@@ -205,8 +212,34 @@ public final class ModelBuilder {
                     LOG.error(message);
                     throw new IllegalStateException( message );
                 }
-                StandardJavaFileManager sjfm = jc.getStandardFileManager(null, null, null);
-                if (!jc.getTask(null, sjfm, null, null, null, sjfm.getJavaFileObjectsFromFiles(listFiles(opt.targetDir, true, ".java"))).call()) {
+                           
+
+                final StandardJavaFileManager sjfm = (StandardJavaFileManager) new StandardJavaFileManagerOverwrite(
+                        jc.getStandardFileManager(null, null, null)
+                );
+
+
+
+
+                LOG.info("----- jc classloader="+jc.getClass().getClassLoader() +" -----\n ----- ") ;
+                Util.printClassLoader( jc.getClass().getClassLoader());
+                LOG.info("----- sjfm class classloader="+sjfm.getClass().getClassLoader() +" -----\n ----- ");
+                Util.printClassLoader( sjfm.getClass().getClassLoader());
+                LOG.info("----- sjfm inline classloader="+sjfm.getClassLoader(StandardLocation.CLASS_PATH) +" -----\n ----- ");
+                Util.printClassLoader( sjfm.getClassLoader(StandardLocation.CLASS_PATH)  );
+//                ClassLoader getClassLoader(Location location);
+//                sjfm.
+                LOG.info( "" );
+
+                final JavaCompiler.CompilationTask task = jc.getTask(null ,
+                        sjfm , null, 
+                       null
+                        //  (Arrays.asList("-classpath",System.getProperty("java.class.path"), "-verbose")),
+                         ,
+                        null, sjfm.getJavaFileObjectsFromFiles(listFiles(opt.targetDir, true, ".java")));
+                // create task with current classpath 
+                // and all generated java files
+                if (!task.call()) {
                     throw new Exception(Messages.COMPILATION_FAILED);
                 }
                 if(opt.createJar){
@@ -247,7 +280,7 @@ public final class ModelBuilder {
     	}
         
     }
-
+    
     public static List<File> listFiles(File root, boolean recursive, String extension) {
         List<File> files = new ArrayList<File>();
         for (File f : root.listFiles()) {
