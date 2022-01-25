@@ -23,9 +23,11 @@ import com.sun.tools.xjc.model.Model;
 import com.sun.tools.xjc.outline.Outline;
 import com.sun.tools.xjc.outline.PackageOutline;
 import com.sun.tools.xjc.util.ErrorReceiverFilter;
+import java.lang.reflect.Method;
 import java.net.URI;
+import java.net.URL;
+import java.net.URLClassLoader;
 import java.util.Arrays;
-import java.util.Iterator;
 
 /**
  * Builds a {@link Model} object.
@@ -197,14 +199,7 @@ public final class ModelBuilder {
                 } catch(Throwable t){ // may throw an exception when jre is used
                     jc = null;
                 }
-
-                LOG.info("-------------------------------------------------------------------");
-                LOG.info("-------------------------------------------------------------------");
-                    LOG.info(
-                      "Prepare Compiler.\n"
-                            + "java.home: " + System.getProperty("java.home") + "\n"
-                            + "java.class.path: " + System.getProperty("java.class.path") 
-                            );
+                
                 if (jc == null) {
                     String message = "Cannot access the javac compiler. Take care you use a JDK instead of a JRE.\n"
                             + "java.home: " + System.getProperty("java.home") + "\n"
@@ -218,23 +213,11 @@ public final class ModelBuilder {
                         jc.getStandardFileManager(null, null, null)
                 );
 
-
-
-
-                LOG.info("----- jc classloader="+jc.getClass().getClassLoader() +" -----\n ----- ") ;
-                Util.printClassLoader( jc.getClass().getClassLoader());
-                LOG.info("----- sjfm class classloader="+sjfm.getClass().getClassLoader() +" -----\n ----- ");
-                Util.printClassLoader( sjfm.getClass().getClassLoader());
-                LOG.info("----- sjfm inline classloader="+sjfm.getClassLoader(StandardLocation.CLASS_PATH) +" -----\n ----- ");
-                Util.printClassLoader( sjfm.getClassLoader(StandardLocation.CLASS_PATH)  );
-//                ClassLoader getClassLoader(Location location);
-//                sjfm.
-                LOG.info( "" );
-
                 final JavaCompiler.CompilationTask task = jc.getTask(null ,
                         sjfm , null, 
-                       null
-                        //  (Arrays.asList("-classpath",System.getProperty("java.class.path"), "-verbose")),
+//                       null
+                          (Arrays.asList("-classpath",
+                                  (System.getProperty("java.class.path") +  File.pathSeparator + this.getClass().getProtectionDomain().getCodeSource().getLocation().toString()), "-verbose"))
                          ,
                         null, sjfm.getJavaFileObjectsFromFiles(listFiles(opt.targetDir, true, ".java")));
                 // create task with current classpath 
@@ -261,20 +244,6 @@ public final class ModelBuilder {
             
             LOG.warn("extend Classpath using " + ( (opt.createJar && opt.jarFilePath!=null) ? opt.jarFilePath : opt.targetDir) );
             Util.register(uri, (opt.createJar && opt.jarFilePath!=null) );
-//            
-//            Method method = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
-//            
-//            method.setAccessible(true);
-//            try{
-//                method.invoke((URLClassLoader) ClassLoader.getSystemClassLoader(), new Object[]{uri.toURL()});
-//            }catch(ClassCastException cce){
-//                final String name = ClassLoader.getSystemClassLoader().getClass().getName();
-//                if(name.contains("osgi") || name.contains("ModuleClassLoader") ){
-////                    ((ModuleClassLoader) ClassLoader.getSystemClassLoader())
-//                }
-////                if("osgi")
-//            }
-//            URLClassLoader.newInstance(urls, parent)
     	} else {
             LOG.debug("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
     	}
