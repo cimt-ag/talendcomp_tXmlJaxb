@@ -65,7 +65,7 @@ public class TXMLStream<T extends TXMLObject> {
     }
 
     public TXMLStream(QName fqname, OutputStream out, int size) {
-        queue = new ArrayBlockingQueue<T>(1024, true);
+        queue = new ArrayBlockingQueue<T>(size, true);
         this.out = out;
         this.fqname = fqname;
 

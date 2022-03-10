@@ -4,15 +4,15 @@
     <groupId>de.cimt.talendcomp</groupId>
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
-    <version>2.22</version>
+    <version>2.23</version>
     
     <issueManagement>
         <system>GitHub</system>
-        <url>https://github.com/jlolling/talendcomp_tXmlJaxb/issues</url>
+        <url>https://github.com/cimt-ag/talendcomp_tXmlJaxb/issues</url>
     </issueManagement>
     
     <scm>
-        <developerConnection>scm:git:https://github.com/jlolling/talendcomp_tXmlJaxb.git</developerConnection>
+        <developerConnection>scm:git:https://github.com/cimt-ag/talendcomp_tXmlJaxb.git</developerConnection>
     </scm>
     
     <build>
@@ -42,25 +42,7 @@
                     </archive>
                 </configuration>
             </plugin>
-            <plugin>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>2.3</version>
-                <configuration>
-                    <finalName>${project.name}</finalName>
-                    <descriptors>
-                        <descriptor>assembly.xml</descriptor>
-                    </descriptors>
-                </configuration>
-                <executions>
-                    <execution>
-                        <id>make-assembly</id>
-                        <phase>deploy</phase>
-                        <goals>
-                            <goal>single</goal>
-                        </goals>
-                    </execution>
-                </executions>
-            </plugin> 
+           
             <plugin>
                 <groupId>de.cimt.talendcomp</groupId>
                 <artifactId>cimt-talendcomp-maven-plugin</artifactId>

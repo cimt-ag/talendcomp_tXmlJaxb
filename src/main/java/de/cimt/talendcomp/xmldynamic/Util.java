@@ -188,12 +188,12 @@ public final class Util {
             String[] names = buf.toString().split("\n");
             for (int i = 0, max = names.length; i < max; i++) {
                 final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.warn("lookup service "+value);
+                LOG.debug("lookup service "+value);
                 if(value.length()==0)
                     continue;
                 if(OSGI){
                     TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
-                    LOG.warn("bindingInstance="+bindingInstance);
+                    LOG.debug("binding Instance="+bindingInstance);
                     BINDINGS.add( bindingInstance );
                 }
             }
@@ -285,7 +285,7 @@ public final class Util {
             }
         }
         builder.append("\nJAX-B Contexts end ###################################\n");
-        System.out.println(builder.toString());
+        LOG.info( builder.toString());
     }
 
     public static void printElements() {
@@ -296,7 +296,7 @@ public final class Util {
                 extractClassInfo(true, builder, clazz);
             }
         }
-        System.out.println(builder.toString());
+        LOG.info( builder.toString());
     }
 
     public static JAXBContext createJAXBContext() throws JAXBException {
@@ -337,14 +337,14 @@ public final class Util {
             String attr = attrList.get(i);
             Object value = currentObject.get(attr);
             if (value instanceof TXMLObject.MissingAttribute) {
-                if (ignoreMissing == false) {
+                if (!ignoreMissing) {
                     throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - the attribute: " + value + " is missing!");
                 }
             } else if (value instanceof TXMLObject) {
                 if (i < attrList.size() - 1) {
                     // continue because we are not at the end of the path
                     currentObject = (TXMLObject) value;
-                    continue; // continue with the next child
+//                    continue; // continue with the next child
                 } else {
                 	// the referenced object is simply a TXMLObject
                 	result.add((TXMLObject) value);
@@ -368,7 +368,7 @@ public final class Util {
                     // nothing left in the path but we do not got a TXMLObject!
                     throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - there is no TXMLObject (a complex xml element) but a value: " + value + ". Reduce your path to address the parent object!");
                 }
-            } else if (nullable == false) {
+            } else if (!nullable) {
                 throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - value is missing but mandatory!");
             }
         }
