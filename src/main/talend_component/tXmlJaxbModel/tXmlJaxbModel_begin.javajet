@@ -19,7 +19,7 @@
     if (jarFilePath == null || jarFilePath.trim().isEmpty()) {
     	 jarFilePath = "null";
     }
-    boolean loadExistingModel = "true".equals(ElementParameterParser.getValue(node, "__ASSUME_MODEL_PRESENT__"));
+    boolean loadExistingModel = "true".equals(ElementParameterParser.getValue(node, "__LOAD_EXISTING_MODEL__"));
     boolean printAbstractClasses = "true".equals(ElementParameterParser.getValue(node, "__PRINTOUT_ABSTRACT_CLASSES__"));
     boolean createGraph = "true".equals(ElementParameterParser.getValue(node, "__PRINTOUT_DOCUMENT_GRAPH__"));
     boolean enableBasicSubstitution = "true".equals(ElementParameterParser.getValue(node, "__PERFORM_TYPE_SUBSTITUTE__"));
@@ -77,12 +77,12 @@
 		}
 	} catch (Throwable e) {
 <%	if (log4jEnabled) { %>
-		log.error(currentComponent + ": " + e.getMessage(), e);
+		log.debug(currentComponent + ": " + e.getMessage(), e);
 <%	} %>
 		globalMap.put("<%=cid%>_ERROR_MESSAGE", "Build model failed: " + e.getMessage());
    		throw e;
 	}
 <%} else if (log4jEnabled) { //loadExistingModel %>
-    log.error("loadExistingModel using preloaded exiting Model ");
+    log.info("loadExistingModel using preloaded exiting Model ");
 
 <%} %>
