@@ -3,8 +3,8 @@
 .classpath
 /*.classpath
 /.settings/
-/*.settings/
 /nb-configuration.xml
 /nbactions.xml
 /target/
 
+/src/main/java/de/cimt/talendcomp/xmldynamic/.idea/

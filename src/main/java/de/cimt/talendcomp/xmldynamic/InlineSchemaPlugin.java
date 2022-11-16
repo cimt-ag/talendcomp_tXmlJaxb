@@ -28,7 +28,6 @@ import com.sun.codemodel.JPackage;
 import com.sun.codemodel.fmt.JTextFile;
 import com.sun.tools.xjc.Options;
 import com.sun.tools.xjc.Plugin;
-import com.sun.tools.xjc.model.Aspect;
 import com.sun.tools.xjc.model.CClassInfo;
 import com.sun.tools.xjc.model.CPropertyInfo;
 import com.sun.tools.xjc.model.CTypeInfo;
@@ -237,14 +236,14 @@ public class InlineSchemaPlugin extends Plugin {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("uri", ((XSAttributeUse) component).getDecl().getTargetNamespace());
             annotate.param("name", ((XSAttributeUse) component).getDecl().getName());
-            annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
+            annotate.param("type", ref.get(0).toType(outline, com.sun.tools.xjc.outline.Aspect.EXPOSED));
             annotate.param("attribute", true);
             return;
         }
         if ( XSElementDecl.class.isAssignableFrom(component.getClass()) ) {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("name", ((XSElementDecl) component).getName());
-            annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
+            annotate.param("type", ref.get(0).toType(outline, com.sun.tools.xjc.outline.Aspect.EXPOSED));
             annotate.param("uri", ((XSElementDecl) component).getTargetNamespace());
             return;
         }

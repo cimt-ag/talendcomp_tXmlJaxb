@@ -28,26 +28,33 @@ import org.eclipse.osgi.internal.loader.ModuleClassLoader;
 
 public final class Util {
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
-    private static final URLClassLoader LOADER;
-    private static final Method METH;
+    private static final XSDClassLoader LOADER;
     private static final List<TXMLBinding> BINDINGS;
     public static final boolean OSGI;
     
-    static class OSGIClassLoader extends URLClassLoader{
+    static class XSDClassLoader extends URLClassLoader{
         private final BundleLoader osgiLoader;
-        public OSGIClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
+        private final ClassLoader myParent;
+        public XSDClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
             super(urls, parent);
             this.osgiLoader=loader;
+            this.myParent=parent;
         }
-        public OSGIClassLoader(ClassLoader parent, BundleLoader loader) {
-            super(new URL[]{},  parent);
-            this.osgiLoader=loader;
+        public XSDClassLoader(ClassLoader parent, BundleLoader loader) {
+            this(new URL[]{},  parent, loader);
         }
         
         private synchronized Class performBundleLookup(String name) throws ClassNotFoundException{
             if(osgiLoader==null)
                 throw new ClassNotFoundException();
-            Class<?> clazz=osgiLoader.findClass(name);
+            Class<?> clazz=null;
+            
+            if(osgiLoader!=null) {
+                clazz=osgiLoader.findClass(name);
+            }
+            if(clazz==null)
+                clazz=myParent.loadClass(name);
+            
             super.addURL( clazz.getProtectionDomain().getCodeSource().getLocation() );
             return clazz;
         }
@@ -101,29 +108,18 @@ public final class Util {
     static{
         Method m;
         boolean isOSGI=false;
-        URLClassLoader cl=null;
+        XSDClassLoader cl=null;
         try{
-            m = URLClassLoader.class.getDeclaredMethod("addURL", new Class[]{URL.class});
-            m.setAccessible(true);
+            final ClassLoader classLoader = Util.class.getClassLoader();
             
-            try{
-                
-                cl=(URLClassLoader) Util.class.getClassLoader();
-            }catch(ClassCastException cce){
-                // regular classloaders normally don't cause this exception
-                final String clName=Util.class.getClassLoader().getClass().getName().toLowerCase();
-                BundleLoader bundleLoader;
-                try{
-                     bundleLoader =  ((ModuleClassLoader) Util.class.getClassLoader()).getBundleLoader();
-                     isOSGI=true;
-                }catch(Throwable t){
-                     bundleLoader = null;
-                }
-                cl=new OSGIClassLoader( Util.class.getClassLoader(), bundleLoader );
+            if(classLoader instanceof ModuleClassLoader){
+                isOSGI=true;
+                cl=new XSDClassLoader(classLoader, ((ModuleClassLoader) classLoader).getBundleLoader() );
                 Thread.currentThread().setContextClassLoader( cl );
-            }
+            } else {
+                cl=new XSDClassLoader(new URL[]{}, Util.class.getClassLoader(), null);
+            } 
 
-            
         }catch(Throwable t){
             LOG.error("failed to init environment",t);
             m=null;
@@ -136,8 +132,6 @@ public final class Util {
         OSGI=isOSGI;
         BINDINGS= new ArrayList<TXMLBinding>();
         LOG.info("OSGI = "+OSGI);
-        METH=m;
-        LOG.info("METHOD = "+METH);
         LOADER=cl;
     }
 
@@ -171,7 +165,7 @@ public final class Util {
         }
         
         try{
-            METH.invoke(LOADER, new Object[]{uri.toURL()});
+            LOADER.addURL( uri.toURL() );
         }catch(Throwable t){
             LOG.error("adding class failed",t);
         }
