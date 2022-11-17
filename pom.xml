@@ -4,7 +4,7 @@
     <groupId>de.cimt.talendcomp</groupId>
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
-    <version>3.3</version>
+    <version>22.3.3</version>
     
     <issueManagement>
         <system>GitHub</system>
