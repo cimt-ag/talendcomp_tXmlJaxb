@@ -1,6 +1,7 @@
 package de.cimt.talendcomp.xmldynamic;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.tools.*;
 import java.io.File;
@@ -17,7 +18,7 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
 public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileManager<StandardJavaFileManager> implements StandardJavaFileManager {
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     private Map<String, List<String>> clazzes=null;
 
     private List<URI> listClasses(File folder){

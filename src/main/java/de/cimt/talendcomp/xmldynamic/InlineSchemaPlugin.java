@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import javax.xml.namespace.QName;
 
-import org.apache.log4j.Logger;
 import org.xml.sax.ErrorHandler;
 import org.xml.sax.SAXException;
 
@@ -40,6 +39,8 @@ import com.sun.xml.xsom.XSComponent;
 import com.sun.xml.xsom.XSElementDecl;
 import com.sun.xml.xsom.XSParticle;
 import com.sun.xml.xsom.XSTerm;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
@@ -103,7 +104,7 @@ public class InlineSchemaPlugin extends Plugin {
     
     
     public static final QName PNS = new QName("http://xsd.cimt.de/plugins/inline", "_cisp", "_cisp");
-    private static final Logger LOG = Logger.getLogger(InlineSchemaPlugin.class);
+    private static final Logger LOG = LoggerFactory.getLogger(InlineSchemaPlugin.class);
     StringBuilder clazzes=new StringBuilder();
     
     @Override
@@ -210,7 +211,7 @@ public class InlineSchemaPlugin extends Plugin {
             jrf.setContents( sbuild.toString() );//clazz.fullName());
 
         } catch (JClassAlreadyExistsException ex) {
-        	LOG.error(ex);
+        	LOG.error(ex.getLocalizedMessage(), ex);
         }
 
     }

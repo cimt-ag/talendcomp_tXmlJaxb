@@ -11,14 +11,15 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 import javax.tools.JavaFileObject;
 import javax.tools.SimpleJavaFileObject;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
  * @author dkoch
  */
 public final class InlineJavaFileObject extends SimpleJavaFileObject implements JavaFileObject{
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     public static final URI location;
     public static final int length;
     public static final boolean packed;

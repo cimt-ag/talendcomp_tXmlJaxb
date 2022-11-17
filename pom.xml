@@ -4,7 +4,7 @@
     <groupId>de.cimt.talendcomp</groupId>
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
-    <version>2.4</version>
+    <version>3.3</version>
     
     <issueManagement>
         <system>GitHub</system>
@@ -42,7 +42,27 @@
                     </archive>
                 </configuration>
             </plugin>
-           
+            <plugin>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.2.4</version>
+                <executions>
+                    <execution>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>shade</goal>
+                        </goals>
+                        <configuration>
+                            <artifactSet>
+                                <includes>
+                                    <include>org.slf4j:slf4j-log4j12</include>
+                                    <include>org.slf4j:jcl-over-slf4j</include>
+                                </includes>
+                            </artifactSet>
+                            <createSourcesJar>true</createSourcesJar>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>de.cimt.talendcomp</groupId>
                 <artifactId>cimt-talendcomp-maven-plugin</artifactId>
@@ -110,6 +130,12 @@
             <groupId>org.colllib</groupId>
             <artifactId>colllib</artifactId>
             <version>1.6</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>commons-logging</groupId>
+                    <artifactId>commons-logging</artifactId>
+                </exclusion>
+            </exclusions>
         </dependency>
         <dependency>
             <groupId>javax.xml.bind</groupId>
@@ -126,16 +152,40 @@
             <artifactId>jaxb-impl</artifactId>
             <version>2.3.0</version>
         </dependency>
-            <dependency>
-                <groupId>com.sun.xml.bind</groupId>
-                <artifactId>jaxb-xjc</artifactId>
-                <version>2.3.0</version>
-            </dependency>
+        <dependency>
+            <groupId>com.sun.xml.bind</groupId>
+            <artifactId>jaxb-xjc</artifactId>
+            <version>2.3.0</version>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
             <version>4.12</version>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-api</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>jcl-over-slf4j</artifactId>
+            <version>${slf4j.version}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-log4j12</artifactId>
+            <version>${slf4j.version}</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+            </exclusions>
+            <scope>compile</scope>
         </dependency>
         <dependency>
             <groupId>org.eclipse</groupId>
@@ -157,5 +207,6 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.componentProjectDirectory>talend_component/tXmlJaxbModel/</project.build.componentProjectDirectory>
+        <slf4j.version>1.7.30</slf4j.version>
     </properties>
 </project>

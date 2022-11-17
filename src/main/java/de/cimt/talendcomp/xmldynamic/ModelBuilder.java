@@ -10,7 +10,8 @@ import java.util.UUID;
 
 import javax.tools.*;
 
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.xml.sax.SAXParseException;
 
 import com.sun.codemodel.JClass;
@@ -40,7 +41,7 @@ import java.util.Arrays;
  */
 public final class ModelBuilder {
 
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final Set<String> MODELS = new HashSet<String>();
     public static final Object LOCK = new Object(); 
     
@@ -68,7 +69,7 @@ public final class ModelBuilder {
 
         @Override
         public void fatalError(SAXParseException saxpe) throws AbortException {
-            LOG.fatal(saxpe.getMessage(), saxpe);
+            LOG.error(saxpe.getMessage(), saxpe);
         }
 
         @Override

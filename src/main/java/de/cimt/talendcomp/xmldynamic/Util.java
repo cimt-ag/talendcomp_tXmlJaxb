@@ -22,12 +22,13 @@ import javax.xml.bind.JAXBContext;
 import javax.xml.bind.JAXBException;
 import javax.xml.bind.Unmarshaller;
 import javax.xml.namespace.QName;
-import org.apache.log4j.Logger;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.eclipse.osgi.internal.loader.BundleLoader;
 import org.eclipse.osgi.internal.loader.ModuleClassLoader;
 
 public final class Util {
-    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final XSDClassLoader LOADER;
     private static final List<TXMLBinding> BINDINGS;
     public static final boolean OSGI;
@@ -84,13 +85,14 @@ public final class Util {
     public static void printClassLoader(ClassLoader classLoader) {
         printClassLoader(classLoader, true);
     }
+    
     public static void printClassLoader(ClassLoader classLoader, boolean showparent) {
         
         if (null == classLoader) {
             return;
         }
         LOG.info("--------------------");
-        LOG.info(classLoader);
+        LOG.info(classLoader.toString());
         if (classLoader instanceof URLClassLoader) {
             URLClassLoader ucl = (URLClassLoader) classLoader;
             int i = 0;
@@ -103,8 +105,7 @@ public final class Util {
             printClassLoader(classLoader.getParent());
         LOG.info("--------------------");
     }
-
-    
+   
     static{
         Method m;
         boolean isOSGI=false;

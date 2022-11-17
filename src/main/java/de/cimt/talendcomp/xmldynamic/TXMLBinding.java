@@ -1,11 +1,6 @@
 package de.cimt.talendcomp.xmldynamic;
 
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
-import javax.xml.bind.annotation.XmlElement;
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.annotation.XmlSchema;
 import javax.xml.namespace.QName;
 
 /**

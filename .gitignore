@@ -2,7 +2,7 @@
 /*.project
 .classpath
 /*.classpath
-/.settings/
+/.settings 
 /nb-configuration.xml
 /nbactions.xml
 /target/
