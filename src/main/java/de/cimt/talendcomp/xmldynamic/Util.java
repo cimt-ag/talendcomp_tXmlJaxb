@@ -110,9 +110,9 @@ public final class Util {
         Method m;
         boolean isOSGI=false;
         XSDClassLoader cl=null;
-        try{
             final ClassLoader classLoader = Util.class.getClassLoader();
             
+        try{
             if(classLoader instanceof ModuleClassLoader){
                 isOSGI=true;
                 cl=new XSDClassLoader(classLoader, ((ModuleClassLoader) classLoader).getBundleLoader() );
@@ -120,11 +120,14 @@ public final class Util {
             } else {
                 cl=new XSDClassLoader(new URL[]{}, Util.class.getClassLoader(), null);
             } 
-
-        }catch(Throwable t){
-            LOG.error("failed to init environment",t);
-            m=null;
+        }catch(java.lang.NoClassDefFoundError t){
+//            LOG.error("failed to init environment",t);
+            cl=new XSDClassLoader(new URL[]{}, Util.class.getClassLoader(), null);
+//            m=null;
         }
+
+
+
         /**
          * when osgi class is of type moduleclassloader and nested classloader doesn't use parent classload for resolving
          * to avoid this problem a colcal classloader must be used 
@@ -139,7 +142,7 @@ public final class Util {
     private static Iterator<TXMLBinding> load(){
         // maybe serviceloader should only build once and reloaded when changes are made by loading a model
         if(!OSGI){
-            return ServiceLoader.load(de.cimt.talendcomp.xmldynamic.TXMLBinding.class).iterator();
+            return ServiceLoader.load(de.cimt.talendcomp.xmldynamic.TXMLBinding.class, LOADER).iterator();
         }
         return BINDINGS.iterator();
     }
@@ -170,31 +173,32 @@ public final class Util {
         }catch(Throwable t){
             LOG.error("adding class failed",t);
         }
-
-        InputStream in=null;
-        try{
-            in=serviceuri.toURL().openStream();
-            int size;
-            byte[] buffer = new byte[2048];
-            StringBuilder buf = new StringBuilder();
-            while ((size = in.read(buffer)) > 0) {
-                buf.append(new String(buffer, 0, size));
-            }
-            String[] names = buf.toString().split("\n");
-            for (int i = 0, max = names.length; i < max; i++) {
-                final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.debug("lookup service "+value);
-                if(value.length()==0)
-                    continue;
-                if(OSGI){
-                    TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
-                    LOG.debug("binding Instance="+bindingInstance);
-                    BINDINGS.add( bindingInstance );
+        
+        if(OSGI){
+            InputStream in=null;
+            try{
+                in=serviceuri.toURL().openStream();
+                int size;
+                byte[] buffer = new byte[2048];
+                StringBuilder buf = new StringBuilder();
+                while ((size = in.read(buffer)) > 0) {
+                    buf.append(new String(buffer, 0, size));
                 }
+                String[] names = buf.toString().split("\n");
+                for (int i = 0, max = names.length; i < max; i++) {
+                    final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
+                    LOG.debug("lookup service "+value);
+                    if(value.length()==0)
+                        continue;
+
+                        TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
+                        LOG.debug("binding Instance="+bindingInstance);
+                        BINDINGS.add( bindingInstance );
+                }
+            }finally{
+                if(in!=null)
+                    in.close();
             }
-        }finally{
-            if(in!=null)
-                in.close();
         }
         
     }

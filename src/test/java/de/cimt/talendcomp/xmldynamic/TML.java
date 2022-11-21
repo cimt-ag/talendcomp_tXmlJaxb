@@ -26,7 +26,7 @@ public class TML {
 		opts.forceGenerate = true;
                 opts.compileSource = true;
                 
-		opts.addGrammar(new File("./src/test/resources/company2.xsd"));
+		opts.addGrammar(new File("./src/test/resources/AtollWS.xsd"));
 		System.out.println("Generate model...");
 		//ModelBuilder.generate(opts, new JCodeModel());
 		
