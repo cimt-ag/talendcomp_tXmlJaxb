@@ -1,15 +1,7 @@
 package de.cimt.talendcomp.xmldynamic.filter;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
+import de.cimt.talendcomp.xmldynamic.Pair;
 import javax.xml.XMLConstants;
-import org.colllib.datastruct.Pair;
-import org.colllib.filter.Filter;
-import org.colllib.util.CollectionUtil;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -20,41 +12,8 @@ import org.xml.sax.SAXException;
  * @author daniel.koch@cimt-ag.de
  */
 public abstract class TypeReadHandler extends BaseFilter {
-/*
-    private final List<Pair<String, String>> _complexTypes = new ArrayList<Pair<String, String>>();
-    private final Map<Pair<String, String>, AtomicInteger> _usageCount = new HashMap<Pair<String, String>, AtomicInteger>() {
-        private static final long serialVersionUID = 1L;
-
-        @SuppressWarnings("unchecked")
-        @Override
-        public AtomicInteger get(Object key) {
-            AtomicInteger val = super.get(key);
-            if (val == null) {
-                val = new AtomicInteger(0);
-                put((Pair<String, String>) key, val);
-            }
-            return val;
-        }
-    };
-    
-    public Set<Pair<String, String>> getComplexTypes() {
-        return CollectionUtil.filterMap(usageCount, new Filter<Pair<String, String>>() {
-                @Override
-                public boolean matches(Pair<String, String> t) {
-                    return complexTypes.contains(t);
-                }
-            },
-                    new Filter<AtomicInteger>() {
-                @Override
-                public boolean matches(AtomicInteger t) {
-                    return t.get() > 1;
-                }
-
-            }).keySet();
-    }*/ 
     public abstract int incrementUsageCount(Pair<String, String> type);
     public abstract void registerComplexType(Pair<String, String> complexType);
-  
     
     @Override
     public void startDocument() throws SAXException {

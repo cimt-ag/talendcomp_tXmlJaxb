@@ -3,12 +3,12 @@ package de.cimt.talendcomp.xmldynamic.filter;
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
 
-import org.colllib.datastruct.Pair;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.AttributesImpl;
 
 import de.cimt.talendcomp.xmldynamic.InlineSchemaPlugin;
+import de.cimt.talendcomp.xmldynamic.Pair;
 
 /**
  *

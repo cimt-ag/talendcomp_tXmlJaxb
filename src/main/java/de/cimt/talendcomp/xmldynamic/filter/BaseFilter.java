@@ -13,8 +13,8 @@ import org.xml.sax.helpers.XMLFilterImpl;
  * @author dkoch
  */
 public class BaseFilter extends XMLFilterImpl {
-
     protected static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
+
     protected Map<String, String> prefixmapping = new HashMap<String, String>();
 
     static String toLocalName(String localName, String qName) {

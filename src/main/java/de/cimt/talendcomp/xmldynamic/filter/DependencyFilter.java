@@ -1,6 +1,7 @@
 package de.cimt.talendcomp.xmldynamic.filter;
 
 import java.net.URI;
+import java.net.URISyntaxException;
 import javax.xml.XMLConstants;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
@@ -34,7 +35,7 @@ public class DependencyFilter extends BaseFilter {
             }
 
             return nestedUri.toString();
-        } catch (Exception ex) {
+        } catch (URISyntaxException ex) {
             throw new RuntimeException(ex);
         }
     }

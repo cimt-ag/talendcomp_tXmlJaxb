@@ -8,7 +8,6 @@ import java.io.StringWriter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
-import java.util.logging.Level;
 
 import javax.xml.transform.OutputKeys;
 import javax.xml.transform.Transformer;
@@ -26,6 +25,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import de.cimt.talendcomp.xmldynamic.Util;
+import javax.xml.transform.TransformerException;
 
 /**
  * extracts schemainformations from wsdl
@@ -36,7 +36,7 @@ public class WSDLSchemaFilter extends BaseFilter {
 
     private ContentHandler def = new DefaultHandler();
     private ContentHandler handler;
-    private final Map<String, String> schemas = new HashMap<String, String>();
+    private final Map<String, String> schemas = new HashMap<>();
 
     private StringWriter writer = null;
 
@@ -52,7 +52,7 @@ public class WSDLSchemaFilter extends BaseFilter {
     public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {
         final String name = toLocalName(localName, qName);
 
-        if (equalUris(W3C_XML_SCHEMA_NS_URI, uri) && "schema".equals(name)) {
+        if (equalUris(W3C_XML_SCHEMA_NS_URI, uri) && "schema".equalsIgnoreCase(name)) {
             try {
                 SAXTransformerFactory stf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
                 TransformerHandler transform = stf.newTransformerHandler();
@@ -123,7 +123,7 @@ public class WSDLSchemaFilter extends BaseFilter {
                 super.endDocument();
 
             }
-        } catch (Exception ex) {
+        } catch (RuntimeException | TransformerException | SAXException ex) {
             throw new RuntimeException(ex);
         }
     }
