@@ -1,7 +1,5 @@
 package de.cimt.talendcomp.xmldynamic.filter;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.xml.sax.helpers.XMLFilterImpl;
@@ -11,9 +9,8 @@ import org.xml.sax.helpers.XMLFilterImpl;
  * @author dkoch
  */
 public class PrintingFilter extends XMLFilterImpl {
-    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
 
-    StringBuilder buffer;
+    StringBuffer buffer;
     @Override
     public void endElement(String uri, String localName, String qName) throws SAXException {
         buffer.append( "</"  ).append( qName.length()>0 ? qName : localName ).append( ">\n"  );
@@ -33,11 +30,11 @@ public class PrintingFilter extends XMLFilterImpl {
     @Override
     public void endDocument() throws SAXException {
         super.endDocument(); 
-        LOG.info( buffer.toString() );
+        System.err.println("\n"+ buffer.toString() );
     }
     @Override
     public void startDocument() throws SAXException {
-        buffer=new StringBuilder();
+        buffer=new StringBuffer();
         super.startDocument(); 
     }
 

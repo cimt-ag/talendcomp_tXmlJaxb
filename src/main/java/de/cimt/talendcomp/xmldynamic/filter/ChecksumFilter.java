@@ -2,9 +2,8 @@ package de.cimt.talendcomp.xmldynamic.filter;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import jakarta.xml.bind.annotation.adapters.HexBinaryAdapter;
 import java.util.logging.Level;
-
-import javax.xml.bind.annotation.adapters.HexBinaryAdapter;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 
@@ -15,13 +14,13 @@ import org.xml.sax.SAXException;
 public class ChecksumFilter extends BaseFilter {
 
     final MessageDigest digest;
-
+    
     public ChecksumFilter(){
         MessageDigest nmd = null;
         try {
             nmd = MessageDigest.getInstance("SHA");
         } catch (NoSuchAlgorithmException ex) {
-            LOG.error(ex.getLocalizedMessage(), ex);
+            LOG.log(Level.SEVERE, "NoSuchAlgorithmException", ex);
         }
         digest = nmd;
     }
@@ -66,5 +65,5 @@ public class ChecksumFilter extends BaseFilter {
     public String toString(){
         return new HexBinaryAdapter().marshal(digest.digest());
     }
-
+    
 }

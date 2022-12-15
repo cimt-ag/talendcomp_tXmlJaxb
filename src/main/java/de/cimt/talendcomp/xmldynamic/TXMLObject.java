@@ -15,25 +15,21 @@ import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
 
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Marshaller;
-import javax.xml.bind.Unmarshaller;
-import javax.xml.bind.annotation.XmlAccessType;
-import javax.xml.bind.annotation.XmlAccessorType;
-import javax.xml.bind.annotation.XmlTransient;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Marshaller;
+import jakarta.xml.bind.Unmarshaller;
+import jakarta.xml.bind.annotation.XmlAccessType;
+import jakarta.xml.bind.annotation.XmlAccessorType;
+import jakarta.xml.bind.annotation.XmlTransient;
 import javax.xml.datatype.XMLGregorianCalendar;
-
-import org.colllib.caches.GenCache;
-import org.colllib.datastruct.Pair;
-import org.colllib.filter.Filter;
-import org.colllib.transformer.Transformer;
-import org.colllib.util.CollectionUtil;
 
 import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
+import java.util.Arrays;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * This class represents the base class for the generated jax-b classes
@@ -43,45 +39,66 @@ import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlTransient
 public abstract class TXMLObject implements Serializable, Cloneable {
+    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
 
     private static final long serialVersionUID = 1L;
-
+    
     public static class MissingAttribute {
-
+    	
     	private String attrName = null;
-
+    	
     	public MissingAttribute(String attrName) {
     		this.attrName = attrName;
     	}
-
+    	
     	public String getName() {
     		return attrName;
     	}
-
+    	
     	@Override
     	public String toString() {
     		return attrName;
     	}
-
+    	
     }
 
+    private ExtPropertyAccessor getPropertyAccessorByName(String attr){
+        final Collection<ExtPropertyAccessor> props = CACHE.get(this.getClass()).values();
+        
+        ExtPropertyAccessor pa= props.stream()
+                    .filter( e -> e.getName().equalsIgnoreCase(attr) )
+                    .findFirst().orElse(null);
+        
+        if(pa!=null)
+            return pa;
+        
+        /*
+            Handle Collections like:
+            @TXMLTypeHelper(collection = true, refs = {
+                @QNameRef(name = "address", type = Customer.Address.class, uri = "http://cimt.de/customer/"),
+                @QNameRef(name = "poaddress", type = Customer.Poaddress.class, uri = "http://cimt.de/customer/")
+            })
+            protected List<de.cimt.customer.Address> addressOrPoaddress;
+        */
+        return props.stream()
+                .collect( Collectors.toMap( e -> e, e -> e.findAnnotation(TXMLTypeHelper.class)))
+                .entrySet().stream()
+                .filter( e -> e.getValue()!=null 
+                        && Arrays.asList( e.getValue().refs() )
+                                .stream().filter( ref -> ref.name().equalsIgnoreCase(attr)).findFirst().orElse(null)!=null )
+                .map( e -> e.getKey() )
+                .findFirst().orElse(null);
+    }
+    
     @XmlTransient
-    private static final GenCache<Class<?>, Map<String, ExtPropertyAccessor>> CACHE = new GenCache<Class<?>, Map<String, ExtPropertyAccessor>>(
-            new GenCache.LookupProvider<Class<?>, Map<String, ExtPropertyAccessor>>() {
+    private static final Map<Class<?>, Map<String, ExtPropertyAccessor>> CACHE = new AutoMap<Class<?>, Map<String, ExtPropertyAccessor>>(){
         @Override
-        public Map<String, ExtPropertyAccessor> lookup(Class<?> k) {
-
-            return CollectionUtil.generateLookupMap(ReflectUtil.introspect(k, Object.class),
-                    new Transformer<ExtPropertyAccessor, String>() {
-                @Override
-                public String transform(ExtPropertyAccessor s) {
-                    return s.getName();
-                }
-            });
+        public Map<String, ExtPropertyAccessor> create(Class<?> key) {
+            return ReflectUtil.introspect(key, Object.class).stream()
+                    .collect( Collectors.toMap(pa -> pa.getName(), pa -> pa));
         }
-
-    });
-
+    };
+ 
     @XmlTransient
     private Pair<Class<? extends TXMLObject>, Object> _xmlParentBinding;
 
@@ -119,49 +136,74 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     public void set_XmlID(Object _xmlID) {
         this._xmlID = _xmlID;
     }
-
+    
     public boolean addOrSet(TXMLObject childObject) {
         if(childObject==null){
-            System.err.println("child is null");
+           LOG.finer("child is null");
            return false;
         }
-
-    	String attrName = findFirstPropertyByType(childObject.getClass());
-    	if (attrName == null) {
+        
+    	ExtPropertyAccessor attr = findFirstyAccessorByType(childObject.getClass());
+    	if (attr == null) {
+            LOG.finer("no property found in class "+getClass().getName()+ " matching type " +childObject.getClass().getName() );
             return false;
-    	} else {
-            return addOrSet(attrName, childObject);
     	}
+        if (Collection.class.isAssignableFrom(attr.getPropertyType()))  
+            return add(attr, childObject.getClass(), childObject);
+        return set(attr, childObject.getClass(), childObject);
     }
-
+    
     @SuppressWarnings({ "unchecked", "rawtypes" })
     public boolean set(String attr, Object value) {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-    	//attr = ReflectUtil.camelizeName(attr);
-        ExtPropertyAccessor pa = CACHE.get(this.getClass()).get(attr.toUpperCase());
-        if (pa == null) {
+        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        if(pa==null){
             return false;
         }
+        if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
+            return set(pa , getCollectionTargetType(pa, attr), value);
+        }
+        return set(pa, pa.getPropertyType(), value);
+    }
+    
+    private Class<?> getCollectionTargetType(final ExtPropertyAccessor accessor, final String name){
+        
+        final TXMLTypeHelper anno = accessor.findAnnotation(TXMLTypeHelper.class);
+        if(anno==null)
+            return Object.class;
+        
+        return Stream.of( anno.refs() ).filter( ref -> ref.name().equalsIgnoreCase(name) ).map( ref -> ref.type() ).findFirst().orElse(null);
+    }
+    
+    private boolean set(ExtPropertyAccessor pa, Class<?> type, Object value){
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
          */
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
-            Object currentValue = pa.getPropertyValue(this);
-            ((Collection) currentValue).clear();
-            if (value != null) {
-                if (Collection.class.isAssignableFrom(value.getClass())) {
-                    ((Collection) currentValue).addAll(((Collection) value));
-                } else {
-                    ((Collection) currentValue).add(ReflectUtil.convert(value, pa.getPropertyType()));
-                }
+            ((Collection) pa.getPropertyValue(this)).clear();
+            return add(pa, type, value);
+        }
+        pa.setPropertyValue(this, ReflectUtil.convert(value, type));
+        return true;
+    }
+   private boolean add(ExtPropertyAccessor pa, Class<?> type, Object value){
+        /**
+         * jaxb never generates setter for collections, so set must be get and
+         * add....
+         */
+        if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
+            Collection currentValue = (Collection) pa.getPropertyValue(this);
+            if (value != null && Collection.class.isAssignableFrom(value.getClass())) {
+                currentValue.addAll(((Collection) value));
+            } else {
+                currentValue.add( ReflectUtil.convert(value, type) );
             }
             return true;
         }
-        pa.setPropertyValue(this, ReflectUtil.convert(value, pa.getPropertyType()));
-        return true;
+        return false;
     }
 
     public Class<?> getType(String attr) {
@@ -175,8 +217,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-//    	attr = ReflectUtil.camelizeName(attr);
-        ExtPropertyAccessor pa = CACHE.get(this.getClass()).get(attr.toUpperCase());
+        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         if (pa == null) {
             return new MissingAttribute(attr);
         }
@@ -192,12 +233,12 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
 //    	attr = ReflectUtil.camelizeName(attr);
-        ExtPropertyAccessor pa = CACHE.get(this.getClass()).get(attr.toUpperCase());
+        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         Object value = null;
         if (pa == null) {
-        	if (ignoreMissing == false) {
-        		throw new Exception("Attribute: " + this.getClass().getName() + "." + attr + " is missing but expected!");
-        	}
+            if (ignoreMissing == false) {
+                throw new Exception("Attribute: " + this.getClass().getName() + "." + attr + " is missing but expected!");
+            }
         } else {
             value = ReflectUtil.convert(pa.getPropertyValue(this), targetClass);
         }
@@ -211,9 +252,8 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-//        attr = ReflectUtil.camelizeName(attr);
         int size = 0;
-        ExtPropertyAccessor pa = CACHE.get(this.getClass()).get(attr.toUpperCase());
+        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
             Object currentValue = pa.getPropertyValue(this);
             size = ((Collection<?>) currentValue).size();
@@ -228,13 +268,13 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
     	//attr = ReflectUtil.camelizeName(attr);
-        ExtPropertyAccessor pa = CACHE.get(this.getClass()).get(attr.toUpperCase());
+        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         if (pa == null) {
             if (attr.indexOf("/") > 0) {
                 try {
                     return childAddOrSet(attr, value);
                 } catch (Exception ex) {
-                    LoggerFactory.getLogger(TXMLObject.class).error(ex.getLocalizedMessage(), ex);
+                    Logger.getLogger(TXMLObject.class.getName()).log(Level.SEVERE, null, ex);
                     return false;
                 }
             } else {
@@ -264,7 +304,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             this.set_XmlParent((TXMLObject) parent);
         } catch (Throwable t) {
         	// can only be class cast exception and then there is nothing to do
-        }
+        } 
     }
 
     public Set<String> getNames() {
@@ -274,23 +314,26 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     public String findFirstPropertyByType(Class<? extends TXMLObject> clazz) {
         for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
             TXMLTypeHelper typeHelper=pa.findAnnotation(TXMLTypeHelper.class);
-            if(typeHelper==null)
-                continue;
-
-            for(QNameRef ref : typeHelper.refs()){
-                if(clazz.equals(ref.type()))
+            if(typeHelper!=null){
+                for(QNameRef ref : typeHelper.refs()){
+                    if(clazz.equals(ref.type()))
+                        return pa.getName();
+                }
+            } else {
+                if( pa.getPropertyType().equals(clazz) ){
                     return pa.getName();
+                }
+                        
             }
         }
         return null;
     }
-
-/*
+    
     private ExtPropertyAccessor findFirstyAccessorByType(Class<? extends TXMLObject> clazz) {
         for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
             TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
-
-            if(eth!=null){
+            
+            if(eth!=null){ 
                 for(  QNameRef ref : eth.refs() ){
                     if(ref.type().equals(clazz)){
                         return pa;
@@ -304,13 +347,13 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         }
         return null;
     }
-*/
+    
     private Pair<ExtPropertyAccessor, Class<?>> findFirstyAccessorByElementName(String name) {
-
+        
         for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
             TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
-
-            if(eth!=null){
+            
+            if(eth!=null){ 
                 for(  QNameRef ref : eth.refs() ){
                     if(ref.name().equals(name)){
                         return new Pair<ExtPropertyAccessor, Class<?>>(pa, ref.type());
@@ -320,8 +363,8 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         }
         return null;
     }
-
-/*
+    
+/*    
     private ExtPropertyAccessor findFirstyAccessorByElementQName(QName fqname) {
         for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
             TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
@@ -341,98 +384,95 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (pos < 0) {
             // this should be handles somewhere else
             return false;
-        }
-
-		final Pair<ExtPropertyAccessor, Class<?>> pa = findFirstyAccessorByElementName( path.substring(0, pos) );
+        } 
+        
+        final Pair<ExtPropertyAccessor, Class<?>> pa = findFirstyAccessorByElementName( path.substring(0, pos) );
         if (pa == null) {
             throw new IllegalArgumentException("unresolveable path "+path+" for class "+this.getClass().getName() );
         }
-//        Class<?> type = pa.x.getPropertyType();
-//        final boolean collectionType = Collection.class.isAssignableFrom(type);
-//        Object value = pa.x.getPropertyValue(this);
         if (TXMLObject.class.isAssignableFrom(pa.y) == false) {
             throw new IllegalArgumentException("unresolveable path "+path+". Referring Element type does not support nested content");
         }
-        TXMLObject child=(TXMLObject) pa.y.newInstance();
+        TXMLObject child=(TXMLObject) pa.y.getConstructor().newInstance();
         this.addOrSet( child );
-
+        
         child.addOrSet(path.substring(pos+1), childvalue);
         return true;
     }
-
-    @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static TXMLObject shakeIt(List<TXMLObject> gll) throws Exception {
-        /**
-         * 1. create map of relations from tuple class, id to object
-         */
-        final HashMap<Pair<Class<? extends TXMLObject>, Object>, TXMLObject> parentLookupMap
-            = CollectionUtil.<TXMLObject, Pair<Class<? extends TXMLObject>, Object>>generateLookupMap(gll,
-                    new Transformer<TXMLObject, Pair<Class<? extends TXMLObject>, Object>>() {
-                @Override
-                public Pair<Class<? extends TXMLObject>, Object> transform(TXMLObject current) {
-                    return new Pair<Class<? extends TXMLObject>, Object>(current.getClass(), current._xmlID);
-                }
-            }
-        );
-
-        /**
-         * 2. find root element
-         */
-        final TXMLObject root = CollectionUtil.applyFilter(gll, new Filter<TXMLObject>() {
-            AtomicInteger count=new AtomicInteger();
-            @Override
-            public boolean matches(TXMLObject row) {
-                if( row._xmlParentBinding  == null ){
-                    if(count.incrementAndGet()>1){
-                        throw new IllegalArgumentException(Messages.format( Messages.SHAKE_MULTIPLEROOTS ));
-                    }
-                    return true;
-                }
-                return false;
-            }
-        }).remove(0);
-
-        /**
-         * 2. create list of child nodes for parent
-         */
-        Map<TXMLObject, ArrayList<TXMLObject>> relations = CollectionUtil.<TXMLObject, TXMLObject>split(gll,
-            new Transformer<TXMLObject, TXMLObject>() {
-                @Override
-                public TXMLObject transform(TXMLObject child) {
-                    return parentLookupMap.get(child._xmlParentBinding);
-                }
-            }
-        );
-
-        /**
-         * 3. assign values to parent
-         */
-        Map<Class, Map<Class<TXMLObject>, PropertyDescriptor>> cache = new HashMap<Class, Map<Class<TXMLObject>, PropertyDescriptor>>();
-
-        for (TXMLObject parent : relations.keySet()) {
-
-            if (!cache.containsKey(parent.getClass())) {
-                cache.put(parent.getClass(), introspect((Class<TXMLObject>) parent.getClass()));
-            }
-
-            Map<Class<TXMLObject>, PropertyDescriptor> parentInfo = cache.get(parent.getClass());
-
-            for (TXMLObject child : relations.get(parent)) {
-                /*
-                 *  parent has attribute of type child-type oder List<child-type>
-                 *  when list, jaxb uses getter an add, otherwise setter is used
-                 */
-                PropertyDescriptor pd = parentInfo.get(child.getClass());
-                if (pd.getPropertyType().isAssignableFrom(List.class)) {
-                    ((List<TXMLObject>) pd.getReadMethod().invoke(parent)).add(child);
-                } else {
-                    pd.getWriteMethod().invoke(parent, child);
-                }
-
-            }
-        }
-        return root;
-    }
+    
+//    @SuppressWarnings({ "rawtypes", "unchecked" })
+//    public static TXMLObject shakeIt(List<TXMLObject> gll) throws Exception {
+//        /**
+//         * 1. create map of relations from tuple class, id to object
+//         */
+//        final HashMap<Pair<Class<? extends TXMLObject>, Object>, TXMLObject> parentLookupMap
+//            = CollectionUtil.<TXMLObject, Pair<Class<? extends TXMLObject>, Object>>generateLookupMap(gll,
+//                    new Transformer<TXMLObject, Pair<Class<? extends TXMLObject>, Object>>() {
+//                @Override
+//                public Pair<Class<? extends TXMLObject>, Object> transform(TXMLObject current) {
+//                    return new Pair<Class<? extends TXMLObject>, Object>(current.getClass(), current._xmlID);
+//                }
+//            }
+//        );
+//
+//        /**
+//         * 2. find root element
+//         */
+//        final TXMLObject root = CollectionUtil.applyFilter(gll, new Filter<TXMLObject>() {
+//            AtomicInteger count=new AtomicInteger();
+//            @Override
+//            public boolean matches(TXMLObject row) {
+//                if( row._xmlParentBinding  == null ){
+//                    if(count.incrementAndGet()>1){
+//                        throw new IllegalArgumentException(Messages.format( Messages.SHAKE_MULTIPLEROOTS ));
+//                    }
+//                    return true;
+//                }
+//                return false;
+//            }
+//        }).remove(0);
+//
+//        /**
+//         * 2. create list of child nodes for parent
+//         */
+//        Map<TXMLObject, ArrayList<TXMLObject>> relations = CollectionUtil.<TXMLObject, TXMLObject>split(gll,
+//            new Transformer<TXMLObject, TXMLObject>() {
+//                @Override
+//                public TXMLObject transform(TXMLObject child) {
+//                    return parentLookupMap.get(child._xmlParentBinding);
+//                }
+//            }
+//        );
+//
+//        /**
+//         * 3. assign values to parent
+//         */
+//        Map<Class, Map<Class<TXMLObject>, PropertyDescriptor>> cache = new HashMap<Class, Map<Class<TXMLObject>, PropertyDescriptor>>();
+//
+//        for (TXMLObject parent : relations.keySet()) {
+//
+//            if (!cache.containsKey(parent.getClass())) {
+//                cache.put(parent.getClass(), introspect((Class<TXMLObject>) parent.getClass()));
+//            }
+//
+//            Map<Class<TXMLObject>, PropertyDescriptor> parentInfo = cache.get(parent.getClass());
+//
+//            for (TXMLObject child : relations.get(parent)) {
+//                /*
+//                 *  parent has attribute of type child-type oder List<child-type>
+//                 *  when list, jaxb uses getter an add, otherwise setter is used 
+//                 */
+//                PropertyDescriptor pd = parentInfo.get(child.getClass());
+//                if (pd.getPropertyType().isAssignableFrom(List.class)) {
+//                    ((List<TXMLObject>) pd.getReadMethod().invoke(parent)).add(child);
+//                } else {
+//                    pd.getWriteMethod().invoke(parent, child);
+//                }
+//
+//            }
+//        }
+//        return root;
+//    }
 
     @SuppressWarnings("unchecked")
     private static Map<Class<TXMLObject>, PropertyDescriptor> introspect(Class<TXMLObject> parent) throws Exception {
@@ -454,11 +494,11 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     public String toXML() throws JAXBException {
         return toXML(false, false);
     }
-
+    
     public String toXML(boolean formatted) throws JAXBException {
         return toXML(formatted, false);
     }
-
+    
     public String toXML(boolean formatted, boolean fragment) throws JAXBException {
         final Marshaller marshaller = Util.createJAXBContext().createMarshaller();
         if (formatted) {
@@ -467,9 +507,9 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if(fragment){
             marshaller.setProperty(Marshaller.JAXB_FRAGMENT, true);
         }
-        StringWriter sw = new StringWriter();
+        StringWriter sw = new StringWriter();       
         marshaller.marshal(this, sw);
         return sw.toString();
-    }
-
+    } 
+    
 }

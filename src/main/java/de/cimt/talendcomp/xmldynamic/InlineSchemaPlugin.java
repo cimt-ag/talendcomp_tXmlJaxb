@@ -32,6 +32,7 @@ import com.sun.tools.xjc.model.CPropertyInfo;
 import com.sun.tools.xjc.model.CTypeInfo;
 import com.sun.tools.xjc.model.Model;
 import com.sun.tools.xjc.model.nav.NClass;
+import com.sun.tools.xjc.outline.Aspect;
 import com.sun.tools.xjc.outline.ClassOutline;
 import com.sun.tools.xjc.outline.Outline;
 import com.sun.xml.xsom.XSAttributeUse;
@@ -39,13 +40,11 @@ import com.sun.xml.xsom.XSComponent;
 import com.sun.xml.xsom.XSElementDecl;
 import com.sun.xml.xsom.XSParticle;
 import com.sun.xml.xsom.XSTerm;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
-import org.colllib.datastruct.AutoInitMap;
-import org.colllib.factories.Factory;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  *
@@ -79,15 +78,15 @@ public class InlineSchemaPlugin extends Plugin {
         "            for(Class<TXMLObject> c : getElements()){\n" +
         "                // only perform namespacecheck when required\n" +
         "                if(!ANYNAMESPACE.equals(nsuri)){\n" +
-        "                    javax.xml.bind.annotation.XmlSchema schema=(javax.xml.bind.annotation.XmlSchema) c.getPackage().getAnnotation(javax.xml.bind.annotation.XmlSchema.class);\n" +
+        "                    jakarta.xml.bind.annotation.XmlSchema schema=(jakarta.xml.bind.annotation.XmlSchema) c.getPackage().getAnnotation(jakarta.xml.bind.annotation.XmlSchema.class);\n" +
         "                    if(schema==null || !schema.namespace().equals( nsuri ))\n" +
         "                        continue;\n" +
         "                }\n" +
         "                \n" +
-        "                javax.xml.bind.annotation.XmlElement elem=c.getAnnotation(javax.xml.bind.annotation.XmlElement.class);\n" +
+        "                jakarta.xml.bind.annotation.XmlElement elem=c.getAnnotation(jakarta.xml.bind.annotation.XmlElement.class);\n" +
         "                if(elem!=null && qn.getLocalPart().equals(elem.name()))\n" +
         "                    return c;\n" +
-        "                javax.xml.bind.annotation.XmlRootElement rootElem=c.getAnnotation(javax.xml.bind.annotation.XmlRootElement.class);\n" +
+        "                jakarta.xml.bind.annotation.XmlRootElement rootElem=c.getAnnotation(jakarta.xml.bind.annotation.XmlRootElement.class);\n" +
         "                if(rootElem!=null && qn.getLocalPart().equals(rootElem.name()))\n" +
         "                    return c;\n" +
         "                \n" +
@@ -104,7 +103,7 @@ public class InlineSchemaPlugin extends Plugin {
     
     
     public static final QName PNS = new QName("http://xsd.cimt.de/plugins/inline", "_cisp", "_cisp");
-    private static final Logger LOG = LoggerFactory.getLogger(InlineSchemaPlugin.class);
+    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
     StringBuilder clazzes=new StringBuilder();
     
     @Override
@@ -129,30 +128,30 @@ public class InlineSchemaPlugin extends Plugin {
 
             model.rootClass = refObject;
 
-            Map<JPackage, JArray> e = new AutoInitMap<JPackage, JArray>( new Factory<JArray>(){
+            Map<JPackage, JArray> e = new AutoMap<JPackage, JArray>(){
                 @Override
-                public JArray create() {
+                public JArray create(JPackage p) {
                     return JExpr.newArray(refClass.narrow(refObject));
                 }
-            }  );
-            Map<JPackage, JArray> t = new AutoInitMap<JPackage, JArray>( new Factory<JArray>(){
+            };
+            Map<JPackage, JArray> t = new AutoMap<JPackage, JArray>(){
                 @Override
-                public JArray create() {
+                public JArray create(JPackage p) {
                     return JExpr.newArray(refClass.narrow(refObject));
                 }
-            }  );
-            Map<JPackage, JArray> n = new AutoInitMap<JPackage, JArray>( new Factory<JArray>(){
+            };
+            Map<JPackage, JArray> n = new AutoMap<JPackage, JArray>(){
                 @Override
-                public JArray create() {
+                public JArray create(JPackage p) {
                     return JExpr.newArray(refString);
                 }
-            }  );            
-            Map<JPackage, Set<String>> namespaces = new AutoInitMap<JPackage, Set<String>>( new Factory<Set<String>>(){
+            };           
+            Map<JPackage, Set<String>> namespaces = new AutoMap<JPackage, Set<String>>(){
                 @Override
-                public Set<String> create() {
+                public Set<String> create(JPackage p) {
                     return new HashSet<String>();
                 }
-            }  );
+            };
             Set<JPackage> packages = new HashSet<JPackage>();
             for (Map.Entry<NClass, CClassInfo> beanset : model.beans().entrySet()) {
                 
@@ -211,7 +210,7 @@ public class InlineSchemaPlugin extends Plugin {
             jrf.setContents( sbuild.toString() );//clazz.fullName());
 
         } catch (JClassAlreadyExistsException ex) {
-        	LOG.error(ex.getLocalizedMessage(), ex);
+        	LOG.log(Level.SEVERE,"JClassAlreadyExistsException", ex);
         }
 
     }
@@ -237,14 +236,15 @@ public class InlineSchemaPlugin extends Plugin {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("uri", ((XSAttributeUse) component).getDecl().getTargetNamespace());
             annotate.param("name", ((XSAttributeUse) component).getDecl().getName());
-            annotate.param("type", ref.get(0).toType(outline, com.sun.tools.xjc.outline.Aspect.EXPOSED));
+             
+            annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
             annotate.param("attribute", true);
             return;
         }
         if ( XSElementDecl.class.isAssignableFrom(component.getClass()) ) {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("name", ((XSElementDecl) component).getName());
-            annotate.param("type", ref.get(0).toType(outline, com.sun.tools.xjc.outline.Aspect.EXPOSED));
+            annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
             annotate.param("uri", ((XSElementDecl) component).getTargetNamespace());
             return;
         }

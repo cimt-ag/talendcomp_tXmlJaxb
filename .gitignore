@@ -1,10 +1,12 @@
-.project
-/*.project
-.classpath
-/*.classpath
-/.settings 
+/target/
 /nb-configuration.xml
 /nbactions.xml
-/target/
+/src/main/java/de/cimt/talendcomp/xmldynamic/Testsome.java
+/talend_component/.classpath
+/src/main/talend_component/.classpath
+/.idea/
+/.settings/
+/.classpath
+/.project
 
-/src/main/java/de/cimt/talendcomp/xmldynamic/.idea/
+/src/main/talend_component/.project

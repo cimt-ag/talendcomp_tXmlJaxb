@@ -1,52 +1,57 @@
 <xsd:schema
-   xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-   xmlns:xjac="http://java.sun.com/xml/ns/jaxb/xjc"
-   xmlns:xasc="http://java.sun.com/xml/ns/jaxb"
-   xmlns="http://cimt.de/customer/"
-   targetNamespace="http://cimt.de/customer/"
-   elementFormDefault="qualified">
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    xmlns:xjac="https://jakarta.ee/xml/ns/jaxb/xjc"
+    xmlns:xasc="https://jakarta.ee/xml/ns/jaxb"
+    xmlns="http://cimt.de/customer/"
+    targetNamespace="http://cimt.de/customer/"
+    elementFormDefault="qualified">
 
-   <xsd:element name="company">
-	   <xsd:complexType>
-	      <xsd:sequence>
-	         <xsd:element name="name" type="xsd:string" minOccurs="0"/>
-	         <xsd:element ref="customer" minOccurs="0" maxOccurs="unbounded"/>
-	      </xsd:sequence>
-	   </xsd:complexType>
-   </xsd:element>
-   <xsd:annotation>
-      <xsd:documentation source="ddex:Definition">A Territory to which the SoundRecording details apply. Either this Element or ExcludedTerritory shall be present, but not both. The use of ISO TerritoryCodes (or the term 'Worldwide”) is strongly encouraged; TIS TerritoryCodes should only be used if both MessageSender and MessageRecipient are familiar with this standard. </xsd:documentation>
-   </xsd:annotation>
-   <xsd:complexType name="address">
-      <xsd:sequence>
-         <xsd:element name="id" type="xsd:int" minOccurs="1" maxOccurs="1"/>
-         <xsd:element name="street" type="xsd:string" minOccurs="0"/>
-         <xsd:element name="_house_number" type="xsd:integer" minOccurs="0" maxOccurs="unbounded"/>
-         <xsd:element name="city" type="xsd:string" minOccurs="0"/>
-      </xsd:sequence>
-   </xsd:complexType>
+    <xsd:element name="company">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="name" type="xsd:string" minOccurs="0"/>
+                <xsd:element ref="customer" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
+        </xsd:complexType>
+    </xsd:element>
+    
+    <xsd:annotation>
+        <xsd:documentation source="ddex:Definition">A Territory to which the SoundRecording details apply. Either this Element or ExcludedTerritory shall be present, but not both. The use of ISO TerritoryCodes (or the term 'Worldwide”) is strongly encouraged; TIS TerritoryCodes should only be used if both MessageSender and MessageRecipient are familiar with this standard. </xsd:documentation>
+    </xsd:annotation>
+    
+    <xsd:complexType name="address">
+        <xsd:sequence>
+            <xsd:element name="id" type="xsd:int" minOccurs="1" maxOccurs="1"/>
+            <xsd:element name="street" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="_house_number" type="xsd:integer" minOccurs="0" maxOccurs="unbounded"/>
+            <xsd:element name="city" type="xsd:string" minOccurs="0"/>
+        </xsd:sequence>
+    </xsd:complexType>
 
-   <xsd:element name="customer">
-	   <xsd:complexType>
-	      <xsd:sequence>
-	         <xsd:element name="id" type="idvalues" minOccurs="0"/>
-	         <xsd:element name="name" type="xsd:string" minOccurs="0"/>
-	         <xsd:element name="address" type="address" minOccurs="0" maxOccurs="unbounded"/>
-	         <xsd:element name="poaddress" type="address" minOccurs="0" maxOccurs="1"/>
-	         <xsd:element name="age" type="xsd:date" minOccurs="0"/>
-	         <xsd:element name="title" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
-	      </xsd:sequence>
-	      <xsd:attribute name="first_name" type="xsd:string"/>
-	      <xsd:attribute name="_lastname" type="xsd:string"/>
-	   </xsd:complexType>
-   </xsd:element>
-   
+    <xsd:element name="customer">
+        <xsd:complexType>
+            <xsd:sequence>
+                <xsd:element name="id" type="idvalues" minOccurs="0"/>
+                <xsd:element name="name" type="xsd:string" minOccurs="0"/>
+                <xsd:choice minOccurs="1" maxOccurs="unbounded">
+                    <xsd:element name="address" type="address" />
+                    <xsd:element name="poaddress" type="address" />
+                </xsd:choice>
+                <xsd:element name="age" type="xsd:date" minOccurs="0"/>
+                <xsd:element name="title" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
+            </xsd:sequence>
+            <xsd:attribute name="first_name" type="xsd:string"/>
+            <xsd:attribute name="_lastname" type="xsd:string"/>
+        </xsd:complexType>
+    </xsd:element>
 
-   <xsd:simpleType name="idvalues">
-	   <xsd:restriction base="xsd:string">
-	   	<xsd:enumeration value="A"/>
-	   	<xsd:enumeration value="B"/>
-	   	<xsd:enumeration value="C"/>
-	   </xsd:restriction>
-   </xsd:simpleType>
+    <xsd:simpleType name="idvalues">
+        <xsd:restriction base="xsd:string">
+            <xsd:enumeration value="A"/>
+            <xsd:enumeration value="B"/>
+            <xsd:enumeration value="C"/>
+        </xsd:restriction>
+    </xsd:simpleType>
+    
+    
 </xsd:schema>

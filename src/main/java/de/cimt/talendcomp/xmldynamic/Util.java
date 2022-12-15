@@ -18,41 +18,41 @@ import java.util.List;
 import java.util.ServiceLoader;
 import java.util.UUID;
 
-import javax.xml.bind.JAXBContext;
-import javax.xml.bind.JAXBException;
-import javax.xml.bind.Unmarshaller;
+import jakarta.xml.bind.JAXBContext;
+import jakarta.xml.bind.JAXBException;
+import jakarta.xml.bind.Unmarshaller;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 import javax.xml.namespace.QName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.eclipse.osgi.internal.loader.BundleLoader;
-import org.eclipse.osgi.internal.loader.ModuleClassLoader;
 
 public final class Util {
-    private static final Logger LOG = LoggerFactory.getLogger("de.cimt.talendcomp.xmldynamic");
+    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
     private static final XSDClassLoader LOADER;
     private static final List<TXMLBinding> BINDINGS;
     public static final boolean OSGI;
     
-    static class XSDClassLoader extends URLClassLoader{
-        private final BundleLoader osgiLoader;
+     static class XSDClassLoader extends URLClassLoader {
+        private final ClassLoader osgiLoader;
         private final ClassLoader myParent;
-        public XSDClassLoader(URL[] urls, ClassLoader parent, BundleLoader loader) {
+        public XSDClassLoader(URL[] urls, ClassLoader parent, ClassLoader loader) {
             super(urls, parent);
             this.osgiLoader=loader;
             this.myParent=parent;
         }
-        public XSDClassLoader(ClassLoader parent, BundleLoader loader) {
+        public XSDClassLoader(ClassLoader parent, ClassLoader loader) {
             this(new URL[]{},  parent, loader);
         }
         
-        private synchronized Class performBundleLookup(String name) throws ClassNotFoundException{
-            if(osgiLoader==null)
-                throw new ClassNotFoundException();
+        private synchronized Class<?> performBundleLookup(String name) throws ClassNotFoundException{
             Class<?> clazz=null;
             
-            if(osgiLoader!=null) {
-                clazz=osgiLoader.findClass(name);
-            }
+            if(osgiLoader!=null)
+                    clazz=Class.forName(name, true, osgiLoader);
+            
             if(clazz==null)
                 clazz=myParent.loadClass(name);
             
@@ -76,23 +76,21 @@ public final class Util {
 
         @Override
         protected void addURL(URL url) {
-//            LOG.warn("add url "+url);
             super.addURL(url);
         }
         
     }
-    
+   
     public static void printClassLoader(ClassLoader classLoader) {
         printClassLoader(classLoader, true);
     }
-    
     public static void printClassLoader(ClassLoader classLoader, boolean showparent) {
         
         if (null == classLoader) {
             return;
         }
-        LOG.info("--------------------");
-        LOG.info(classLoader.toString());
+        LOG.fine("--------------------");
+        LOG.fine(classLoader.toString());
         if (classLoader instanceof URLClassLoader) {
             URLClassLoader ucl = (URLClassLoader) classLoader;
             int i = 0;
@@ -103,27 +101,31 @@ public final class Util {
         }
         if(showparent)
             printClassLoader(classLoader.getParent());
-        LOG.info("--------------------");
+        LOG.fine("--------------------");
     }
-   
+
+    
     static{
         Method m;
         boolean isOSGI=false;
         XSDClassLoader cl=null;
-            final ClassLoader classLoader = Util.class.getClassLoader();
+        final ClassLoader classLoader = Util.class.getClassLoader();
             
         try{
-            if(classLoader instanceof ModuleClassLoader){
+            Class<?> cb=Class.forName("org.eclipse.osgi.internal.loader.ModuleClassLoader");
+            
+            LOG.finer("classLoader :" + classLoader.getClass() );
+            if(classLoader.getClass().equals(cb) ){
                 isOSGI=true;
-                cl=new XSDClassLoader(classLoader, ((ModuleClassLoader) classLoader).getBundleLoader() );
+                
+                cl=new XSDClassLoader(classLoader, (ClassLoader) (cb.getMethod("getBundleLoader").invoke(cb) ));
                 Thread.currentThread().setContextClassLoader( cl );
             } else {
                 cl=new XSDClassLoader(new URL[]{}, Util.class.getClassLoader(), null);
             } 
-        }catch(java.lang.NoClassDefFoundError t){
-//            LOG.error("failed to init environment",t);
+        }catch(java.lang.NoClassDefFoundError | ClassNotFoundException | NoSuchMethodException |SecurityException | InvocationTargetException | IllegalArgumentException | IllegalAccessException t){
+            LOG.log(Level.FINEST, "failed to find ModuleClassLoader ",t);
             cl=new XSDClassLoader(new URL[]{}, Util.class.getClassLoader(), null);
-//            m=null;
         }
 
 
@@ -135,11 +137,11 @@ public final class Util {
         
         OSGI=isOSGI;
         BINDINGS= new ArrayList<TXMLBinding>();
-        LOG.info("OSGI = "+OSGI);
+        LOG.finer("OSGI = "+OSGI);
         LOADER=cl;
     }
 
-    private static Iterator<TXMLBinding> load(){
+    public static Iterator<TXMLBinding> load(){
         // maybe serviceloader should only build once and reloaded when changes are made by loading a model
         if(!OSGI){
             return ServiceLoader.load(de.cimt.talendcomp.xmldynamic.TXMLBinding.class, LOADER).iterator();
@@ -151,7 +153,7 @@ public final class Util {
         try {
             return ((Class<TXMLObject>) findClass(name)).newInstance();
         } catch (Exception ex) {
-            LOG.error("Error instantiating class "+name, ex);
+            LOG.log(Level.SEVERE, "Error instantiating class "+name, ex);
             throw ex;
         }
     }
@@ -160,7 +162,7 @@ public final class Util {
         return LOADER.loadClass(name);        
     }
 
-    static void register(URI uri, boolean jar) throws Exception{
+    static void register(URI uri, boolean jar) throws Exception {
         URI serviceuri;
         if(jar){
             serviceuri= new URI( "jar:" + uri.toASCIIString() +"!/META-INF/services/de.cimt.talendcomp.xmldynamic.TXMLBinding" );
@@ -171,34 +173,33 @@ public final class Util {
         try{
             LOADER.addURL( uri.toURL() );
         }catch(Throwable t){
-            LOG.error("adding class failed",t);
+            LOG.log(Level.SEVERE, "adding class failed",t);
         }
-        
-        if(OSGI){
-            InputStream in=null;
-            try{
-                in=serviceuri.toURL().openStream();
-                int size;
-                byte[] buffer = new byte[2048];
-                StringBuilder buf = new StringBuilder();
-                while ((size = in.read(buffer)) > 0) {
-                    buf.append(new String(buffer, 0, size));
-                }
-                String[] names = buf.toString().split("\n");
-                for (int i = 0, max = names.length; i < max; i++) {
-                    final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                    LOG.debug("lookup service "+value);
-                    if(value.length()==0)
-                        continue;
 
-                        TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).newInstance();
-                        LOG.debug("binding Instance="+bindingInstance);
-                        BINDINGS.add( bindingInstance );
-                }
-            }finally{
-                if(in!=null)
-                    in.close();
+        InputStream in=null;
+        try{
+            in=serviceuri.toURL().openStream();
+            int size;
+            byte[] buffer = new byte[2048];
+            StringBuilder buf = new StringBuilder();
+            while ((size = in.read(buffer)) > 0) {
+                buf.append(new String(buffer, 0, size));
             }
+            String[] names = buf.toString().split("\n");
+            for (int i = 0, max = names.length; i < max; i++) {
+                final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
+                LOG.warning("lookup service "+value);
+                if(value.length()==0)
+                    continue;
+                if(OSGI){
+                    TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).getConstructor().newInstance();
+                    LOG.warning("bindingInstance="+bindingInstance);
+                    BINDINGS.add( bindingInstance );
+                }
+            }
+        }finally{
+            if(in!=null)
+                in.close();
         }
         
     }
@@ -284,7 +285,7 @@ public final class Util {
             }
         }
         builder.append("\nJAX-B Contexts end ###################################\n");
-        LOG.info( builder.toString());
+        System.out.println(builder.toString());
     }
 
     public static void printElements() {
@@ -295,7 +296,7 @@ public final class Util {
                 extractClassInfo(true, builder, clazz);
             }
         }
-        LOG.info( builder.toString());
+        System.out.println(builder.toString());
     }
 
     public static JAXBContext createJAXBContext() throws JAXBException {
@@ -304,7 +305,7 @@ public final class Util {
         while (iterator.hasNext()) {
             classes.addAll(iterator.next().getClasses());
         }
-        return JAXBContext.newInstance(classes.toArray(new Class[classes.size()]));
+        return JAXBContext.newInstance(classes.toArray(new Class[classes.size()]) );
     }
 
     public static Class<TXMLObject> findClassFor(QName qn) throws JAXBException {
@@ -336,14 +337,14 @@ public final class Util {
             String attr = attrList.get(i);
             Object value = currentObject.get(attr);
             if (value instanceof TXMLObject.MissingAttribute) {
-                if (!ignoreMissing) {
+                if (ignoreMissing == false) {
                     throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - the attribute: " + value + " is missing!");
                 }
             } else if (value instanceof TXMLObject) {
                 if (i < attrList.size() - 1) {
                     // continue because we are not at the end of the path
                     currentObject = (TXMLObject) value;
-//                    continue; // continue with the next child
+                    continue; // continue with the next child
                 } else {
                 	// the referenced object is simply a TXMLObject
                 	result.add((TXMLObject) value);
@@ -367,7 +368,7 @@ public final class Util {
                     // nothing left in the path but we do not got a TXMLObject!
                     throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - there is no TXMLObject (a complex xml element) but a value: " + value + ". Reduce your path to address the parent object!");
                 }
-            } else if (!nullable) {
+            } else if (nullable == false) {
                 throw new Exception("Starting from the object: " + parent.toString() + " following the path: " + attrPath + " - value is missing but mandatory!");
             }
         }

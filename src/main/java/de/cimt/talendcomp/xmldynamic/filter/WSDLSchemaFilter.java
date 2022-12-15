@@ -25,7 +25,7 @@ import org.xml.sax.SAXException;
 import org.xml.sax.helpers.DefaultHandler;
 
 import de.cimt.talendcomp.xmldynamic.Util;
-import javax.xml.transform.TransformerException;
+import java.util.logging.Level;
 
 /**
  * extracts schemainformations from wsdl
@@ -36,7 +36,7 @@ public class WSDLSchemaFilter extends BaseFilter {
 
     private ContentHandler def = new DefaultHandler();
     private ContentHandler handler;
-    private final Map<String, String> schemas = new HashMap<>();
+    private final Map<String, String> schemas = new HashMap<String, String>();
 
     private StringWriter writer = null;
 
@@ -52,7 +52,7 @@ public class WSDLSchemaFilter extends BaseFilter {
     public void startElement(String uri, String localName, String qName, Attributes atts) throws SAXException {
         final String name = toLocalName(localName, qName);
 
-        if (equalUris(W3C_XML_SCHEMA_NS_URI, uri) && "schema".equalsIgnoreCase(name)) {
+        if (equalUris(W3C_XML_SCHEMA_NS_URI, uri) && "schema".equals(name)) {
             try {
                 SAXTransformerFactory stf = (SAXTransformerFactory) SAXTransformerFactory.newInstance();
                 TransformerHandler transform = stf.newTransformerHandler();
@@ -70,7 +70,7 @@ public class WSDLSchemaFilter extends BaseFilter {
                     transform.startPrefixMapping(mapping.getKey(), mapping.getValue());
                 }
             } catch (TransformerConfigurationException ex) {
-            	LOG.error(ex.getLocalizedMessage(), ex);
+                LOG.log(Level.SEVERE, ex.getLocalizedMessage(), ex);
             }
         }
         super.startElement(uri, localName, qName, atts);
@@ -105,7 +105,7 @@ public class WSDLSchemaFilter extends BaseFilter {
             if (schemas.size() < 1) {
                 super.endDocument();
                 return;
-            }
+            } 
 
             synchronized(this){
                 final Transformer transformer = TransformerFactory.newInstance().newTransformer();
@@ -121,9 +121,9 @@ public class WSDLSchemaFilter extends BaseFilter {
                 }
 
                 super.endDocument();
-
+             
             }
-        } catch (RuntimeException | TransformerException | SAXException ex) {
+        } catch (Exception ex) {
             throw new RuntimeException(ex);
         }
     }

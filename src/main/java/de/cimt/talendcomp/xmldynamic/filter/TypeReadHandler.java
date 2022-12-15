@@ -12,8 +12,10 @@ import org.xml.sax.SAXException;
  * @author daniel.koch@cimt-ag.de
  */
 public abstract class TypeReadHandler extends BaseFilter {
+ 
     public abstract int incrementUsageCount(Pair<String, String> type);
     public abstract void registerComplexType(Pair<String, String> complexType);
+  
     
     @Override
     public void startDocument() throws SAXException {

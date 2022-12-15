@@ -19,9 +19,6 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.sax.SAXSource;
 import javax.xml.transform.stream.StreamResult;
 
-import org.colllib.datastruct.Pair;
-import org.colllib.filter.Filter;
-import org.colllib.util.CollectionUtil;
 import org.xml.sax.InputSource;
 import org.xml.sax.XMLReader;
 
@@ -36,15 +33,20 @@ import de.cimt.talendcomp.xmldynamic.filter.PrintingFilter;
 import de.cimt.talendcomp.xmldynamic.filter.TypeReadHandler;
 import de.cimt.talendcomp.xmldynamic.filter.WSDLSchemaFilter;
 import de.cimt.talendcomp.xmldynamic.filter.XMLFilterChain;
+import java.io.FileNotFoundException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
 import java.util.jar.JarInputStream;
 import java.util.jar.Manifest;
+import java.util.logging.Filter;
 import java.util.logging.Level;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
+import org.xml.sax.SAXException;
 
 /**
  *
@@ -52,7 +54,7 @@ import org.slf4j.LoggerFactory;
  */
 public class XJCOptions extends Options {
 
-    private static final Logger LOG = LoggerFactory.getLogger(XJCOptions.class);
+    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
     public boolean extendClasspath = true;
     public boolean compileSource = true;
     public boolean casesensitive = false;
@@ -70,7 +72,7 @@ public class XJCOptions extends Options {
     public long newestGrammar = 0l;
     public static final String VERSION;
     public static final String LASTUPDATE;
-
+    
     static {
         String versionString="unknown";
         String d="";
@@ -86,10 +88,10 @@ public class XJCOptions extends Options {
         VERSION   =versionString;
         LASTUPDATE=d;
     }
-
+    
     // stores relations between source and alias
     private final Map<String, String> grammarCache = new HashMap<String, String>();
-
+    
     // temporary directory used to store modified grammars
     private final File tmproot;
     private final List<Pair<String, String>> _complexTypes = new ArrayList<Pair<String, String>>();
@@ -107,7 +109,7 @@ public class XJCOptions extends Options {
             return val;
         }
     };
-
+    
     /**
      * used to activate printing of manipulated grammars before generating code model
      */
@@ -117,12 +119,12 @@ public class XJCOptions extends Options {
         try {
             tmpfile = File.createTempFile("2890374092", "092830198");
         } catch (IOException ex) {
-        	LOG.error(ex.getLocalizedMessage(), ex);
+            LOG.log(Level.SEVERE,"Error creating temporary file", ex);
             throw new RuntimeException("temp not available");
         }
         tmproot = new File(tmpfile.getParentFile(), Util.uniqueString());
-        if (LOG.isDebugEnabled()) {
-            LOG.debug("Set tmp-root to: "+tmproot.getAbsolutePath());
+        if (LOG.isLoggable(Level.FINER)) {
+            LOG.finer("Set tmp-root to: "+tmproot.getAbsolutePath());
         }
         tmproot.mkdirs();
         tmproot.deleteOnExit();
@@ -133,22 +135,16 @@ public class XJCOptions extends Options {
         enableIntrospection = true;
         verbose = true;
     }
-
+    
     private Set<Pair<String, String>> getComplexTypes() {
-        return CollectionUtil.filterMap(_usageCount, new Filter<Pair<String, String>>() {
-                @Override
-                public boolean matches(Pair<String, String> t) {
-                    return _complexTypes.contains(t);
-                }
-            },
-            new Filter<AtomicInteger>() {
-                @Override
-                public boolean matches(AtomicInteger t) {
-                    return t.get() > 1;
-                }
-            }).keySet();
+        return _usageCount.entrySet()
+                .stream()
+                .filter(p -> p.getValue().get() > 1)
+                .filter(p -> _complexTypes.contains(p.getKey()))
+                .map(p -> p.getKey())
+                .collect(Collectors.toSet());
     }
-
+    
     @Override
     protected void finalize() throws Throwable {
         for (File f : tmproot.listFiles()) {
@@ -161,9 +157,9 @@ public class XJCOptions extends Options {
     @Override
     public synchronized void addGrammar(final InputSource source) throws RuntimeException {
         /**
-         * Changed behavior as this method never send the original inputsource
-         * to the superclass.
-         * It uses a set of filters to pre-process the original input and to parse
+         * Changed behavior as this method never send the original inputsource 
+         * to the superclass. 
+         * It uses a set of filters to pre-process the original input and to parse 
          * it as one or multiple expands sources to a in-memory-source instance.
          * this one will be transferred to the superclass.
          */
@@ -194,8 +190,8 @@ public class XJCOptions extends Options {
             }
             if (source.getClass().equals(InMemorySource.class)) {
                 alias = ((InMemorySource) source).alias;
-            }
-
+            } 
+            
             chain.add( new TypeReadHandler(){
                 @Override
                 public int incrementUsageCount(Pair<String, String> type) {
@@ -207,9 +203,9 @@ public class XJCOptions extends Options {
                     _complexTypes.add(complexType);
                 }
             });
-
+            
             DependencyFilter df = new DependencyFilter(rootURI) {
-
+                
                 @Override
                 protected synchronized String getRelocatedSchemaLocation(URI root, String location) {
                     if (location == null || location.length() == 0) {
@@ -226,7 +222,7 @@ public class XJCOptions extends Options {
                             nestedUri = root.resolve(nestedUri);
                         }
                         String systemID = nestedUri.toString();
-
+                                
                         // only not handled sources must be analyzed...
                         if (!grammarCache.containsKey(systemID)) {
                             InputSource source = new InputSource(systemID);
@@ -261,7 +257,7 @@ public class XJCOptions extends Options {
 
             super.addGrammar( new InMemorySource(w.toString(), alias) );
         } catch (Throwable ex) {
-        	LOG.error(Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
+        	LOG.log(Level.SEVERE, Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
             throw new RuntimeException(Messages.format("PRELOAD.ANALYSE.FAILED"), ex);
         }
     }
@@ -276,7 +272,7 @@ public class XJCOptions extends Options {
             SAXParserFactory spf = SAXParserFactory.newInstance();
             spf.setNamespaceAware(true);
             spf.setXIncludeAware(true);
-
+            
             final Set<Pair<String, String>> typeBindings = getComplexTypes();
             PluginFilter pluginFilter = new PluginFilter() {
                 @Override
@@ -290,7 +286,7 @@ public class XJCOptions extends Options {
             if (createGraph) {
                 chain.add(new GraphFilter());
             }
-
+            
             if (ignoreAnnotations) {
             	chain.add(new AnnotationFilter());
             }
@@ -303,30 +299,30 @@ public class XJCOptions extends Options {
             final Transformer transformer = TransformerFactory.newInstance().newTransformer();
             for (InputSource source : super.getGrammars()) {
                 File res = new File(tmproot, ((InMemorySource) source).alias);
-                if (LOG.isDebugEnabled()) {
-                	LOG.debug("Use as temporary xsd result file: " + res.getAbsolutePath());
+                if (LOG.isLoggable(Level.FINER)) {
+                	LOG.finer("Use as temporary xsd result file: " + res.getAbsolutePath());
                 }
                 transformer.transform(
                     new SAXSource(reader, source),
                     new StreamResult(res)
                 );
-
+                
                 InputSource exportedGrammar = new InputSource(new FileInputStream(res));
                 exportedGrammar.setSystemId( res.toURI().toString() );
                 ng.add( exportedGrammar );
             }
-
+            
             checksumValue = csf.toString();
             return ng.toArray( new InputSource[ng.size()] );
-        } catch (Exception ex) {
-        	LOG.error(ex.getLocalizedMessage(), ex);
+        } catch (FileNotFoundException | ParserConfigurationException | TransformerException | SAXException ex) {
+            LOG.log(Level.SEVERE, "Error transforming grammar", ex);
             throw new RuntimeException(ex);
         }
     }
 
     /**
      * Recursively scan directories and add all XSD files in it.
-     * @param dir folder or file
+     * @param dir folder or file 
      */
     @Override
     public void addGrammarRecursive(File dir) {
@@ -354,7 +350,7 @@ public class XJCOptions extends Options {
             return bindfiles;
         }
         /**
-         * when enableBasicSubstitution is set, activate replacement for xsd:duration,
+         * when enableBasicSubstitution is set, activate replacement for xsd:duration, 
          * xsd:date, xsd:dateTime and enable plugin xjc-simple
          */
         InputSource bind = new InputSource(XJCOptions.class.getResourceAsStream("bindings.xml"));
@@ -378,5 +374,5 @@ public class XJCOptions extends Options {
             }
     }
 
-
+    
 }

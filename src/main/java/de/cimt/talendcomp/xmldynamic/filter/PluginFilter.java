@@ -16,8 +16,8 @@ import de.cimt.talendcomp.xmldynamic.Pair;
  */
 public class PluginFilter extends BaseFilter {
 
-    public static final QName JAXB = new QName("http://java.sun.com/xml/ns/jaxb", "jaxb", "jaxb");
-    public static final QName XJC  = new QName("http://java.sun.com/xml/ns/jaxb/xjc", "xjc", "xjc");
+    public static final QName JAXB = new QName("https://jakarta.ee/xml/ns/jaxb", "jaxb", "jaxb");
+    public static final QName XJC  = new QName("https://jakarta.ee/xml/ns/jaxb/xjc", "xjc", "xjc");
     private class ElementStored{
         String uri;
         String prefix;

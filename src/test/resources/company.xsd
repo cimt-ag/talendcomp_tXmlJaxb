@@ -1,7 +1,7 @@
 <xsd:schema
    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
-   xmlns:xjac="http://java.sun.com/xml/ns/jaxb/xjc"
-   xmlns:xasc="http://java.sun.com/xml/ns/jaxb"
+   xmlns:xjac="https://jakarta.ee/xml/ns/jaxb/xjc"
+   xmlns:xasc="https://jakarta.ee/xml/ns/jaxb"
    xmlns="http://cimt.de/customer/"
    targetNamespace="http://cimt.de/customer/"
    elementFormDefault="qualified">

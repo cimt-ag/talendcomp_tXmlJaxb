@@ -26,9 +26,9 @@ public class GraphFilter extends BaseFilter {
     private final String attMarker = "@";
     private final String cpxMarker = "$";
 
-    StringBuilder buffer = new StringBuilder();
+    StringBuffer buffer = new StringBuffer();
     int tabs = 0;
-    Stack<Integer> breadcrumb = new Stack<>();
+    Stack<Integer> breadcrumb = new Stack<Integer>();
 
     private String spaces() {
         char[] spaces = new char[tabs];
@@ -74,14 +74,14 @@ public class GraphFilter extends BaseFilter {
 
     @Override
     public void startDocument() throws SAXException {
-        buffer = new StringBuilder();
+        buffer = new StringBuffer();
         super.startDocument();
     }
 
     @Override
     public void endDocument() throws SAXException {
         super.endDocument();
-        LOG.info(buffer.toString());
+        System.err.println(buffer.toString());
     }
 
 }

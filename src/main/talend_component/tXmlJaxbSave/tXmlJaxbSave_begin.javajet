@@ -30,7 +30,7 @@
     boolean log4jEnabled = "true".equals(org.talend.core.model.process.ElementParameterParser.getValue(node.getProcess(), "__LOG4J_ACTIVATE__")) && 
    							"JOBLET".equals(node.getComponent().getComponentType().toString()) == false;
 %>
-	javax.xml.bind.Marshaller <%=cid%>_marshaller = null;
+	jakarta.xml.bind.Marshaller <%=cid%>_marshaller = null;
 	Object object_<%=cid%> = null;
 	try {
 		String parentObjectCompentName = "<%=parentObject%>";
@@ -39,16 +39,16 @@
 			throw new Exception("Parent object: " + parentObjectCompentName + " does not exist!");
 		}
 		String packageName = object_<%=cid%>.getClass().getPackage().getName();
-		javax.xml.bind.JAXBContext jaxbContext = de.cimt.talendcomp.xmldynamic.Util.createJAXBContext();
+		jakarta.xml.bind.JAXBContext jaxbContext = de.cimt.talendcomp.xmldynamic.Util.createJAXBContext();
 		<%=cid%>_marshaller = jaxbContext.createMarshaller();
 <%	if (prettyPrint) { %>
-		<%=cid%>_marshaller.setProperty(javax.xml.bind.Marshaller.JAXB_FORMATTED_OUTPUT, true);
+		<%=cid%>_marshaller.setProperty(jakarta.xml.bind.Marshaller.JAXB_FORMATTED_OUTPUT, true);
 <%	} %>
 <%	if (fragmented) { %>
-		<%=cid%>_marshaller.setProperty(javax.xml.bind.Marshaller.JAXB_FRAGMENT, true);
+		<%=cid%>_marshaller.setProperty(jakarta.xml.bind.Marshaller.JAXB_FRAGMENT, true);
 <%	} %>
 <%	if (encoding != null && encoding.trim().isEmpty() == false) { %>
-		<%=cid%>_marshaller.setProperty(javax.xml.bind.Marshaller.JAXB_ENCODING, <%=encoding%>);
+		<%=cid%>_marshaller.setProperty(jakarta.xml.bind.Marshaller.JAXB_ENCODING, <%=encoding%>);
 <%	} %>
 <%	if (outputAsfile) { %>
 		String filePath = <%=file%>;

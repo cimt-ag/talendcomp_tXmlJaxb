@@ -29,9 +29,10 @@
    							"JOBLET".equals(node.getComponent().getComponentType().toString()) == false;
     
 
+    
     if(!loadExistingModel){
 %>
-	try {
+        try {
 		String xsdFilePath = <%=xsdFile%>;
         // TODO: please avoid variable names used outside jet
 		java.io.File xsdFile = null;
@@ -77,7 +78,7 @@
 		}
 	} catch (Throwable e) {
 <%	if (log4jEnabled) { %>
-		log.debug(currentComponent + ": " + e.getMessage(), e);
+		log.info(currentComponent + ": " + e.getMessage(), e);
 <%	} %>
 		globalMap.put("<%=cid%>_ERROR_MESSAGE", "Build model failed: " + e.getMessage());
    		throw e;

@@ -1,5 +1,6 @@
 package de.cimt.talendcomp.xmldynamic;
 
+import de.cimt.utils.conversion.Converter;
 import java.beans.IntrospectionException;
 import java.beans.PropertyDescriptor;
 import java.io.File;
@@ -36,8 +37,12 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.xml.bind.annotation.XmlRootElement;
-import javax.xml.bind.util.JAXBResult;
+import jakarta.xml.bind.annotation.XmlRootElement;
+import jakarta.xml.bind.util.JAXBResult;
+import java.util.Objects;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.Duration;
@@ -50,16 +55,6 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stax.StAXSource;
 import javax.xml.transform.stream.StreamSource;
 
-import org.colllib.caches.GenCache;
-import org.colllib.datastruct.AutoInitMap;
-import org.colllib.datastruct.Pair;
-import org.colllib.filter.Filter;
-import org.colllib.introspect.Introspector;
-import org.colllib.introspect.PropertyAccessor;
-import org.colllib.transformer.Transformer;
-import org.colllib.transformer.TransformerCollection;
-import org.colllib.util.CollectionUtil;
-import org.colllib.util.TypeUtil;
 import org.w3c.dom.Node;
 
 /**
@@ -70,6 +65,7 @@ import org.w3c.dom.Node;
 public class ReflectUtil {
 
 	private static boolean printDebugInfo = false;
+    private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
 	
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static Number convertNumber(String text, Class type) throws ParseException {
@@ -156,7 +152,7 @@ public class ReflectUtil {
                 TransformerFactory.newInstance().newTransformer().transform(s, result);
                 return (T) result.getResult();
             }
-            return TypeUtil.convert(v, vClass, tClass);
+            return Converter.convert(v, vClass, tClass);
         } catch (Throwable t) {
             throw new RuntimeException(t);
         }
@@ -215,7 +211,7 @@ public class ReflectUtil {
             return convertXML(v, vClass, tClass);
         }
         try {
-            return TypeUtil.convert(v, vClass, tClass);
+            return Converter.convert(v, vClass, tClass);
         } catch (Throwable uoe) {
             if (Number.class.isAssignableFrom(tClass)) {
                 try {
@@ -231,6 +227,8 @@ public class ReflectUtil {
             } else if ((Boolean.class.equals(tClass) || boolean.class.equals(tClass)) && Number.class.isAssignableFrom(vClass)) {
                 return convert(Boolean.toString(((Number) v).intValue() == 1), String.class, tClass);
             }
+            
+            System.err.println("convert failed: convert "+vClass.getName()+" with value "+v+" to class "+tClass.getName());
             throw new RuntimeException(uoe);
         }
     }
@@ -298,7 +296,7 @@ public class ReflectUtil {
     /**
      * Finds EnumConstant by String. This method allows customized enumconstants
      * by annotations with names ending with *EnumValue (like
-     * javax.xml.bind.annotation.XmlEnumValue)
+     * jakarta.xml.bind.annotation.XmlEnumValue)
      *
      * @param <T>
      * @param clazz
@@ -376,40 +374,16 @@ public class ReflectUtil {
         return findAnnotatedMethod(type.getSuperclass(), anno);
     }
 
-    public static List< Pair<PropertyAccessor, Field>> introspectJoinField(Class<?> type) {
-        final Map<String, Field> fieldByName = CollectionUtil.generateLookupMap(
-                getAllFields(type),
-                TransformerCollection.<Field, String>methodCall("getName")
-        );
-
-        return CollectionUtil.transform(
-                Introspector.introspect(type),
-                new Transformer<PropertyAccessor, Pair<PropertyAccessor, Field>>() {
-            @Override
-            public Pair<PropertyAccessor, Field> transform(PropertyAccessor pa) {
-                Field f = null;
-                if (pa.getPublicField() != null) {
-                    f = pa.getPublicField();
-                } else if (fieldByName.containsKey(pa.getName())) {
-                    f = fieldByName.get(pa.getName());
-                }
-                return new Pair<PropertyAccessor, Field>(pa, f);
-            }
-
-        }
-        );
-    }
+   
 
     private static final Pattern MPAT = Pattern.compile("(get|is|set)(.*)");
 
-    private static final GenCache<Class<?>, List<ExtPropertyAccessor>> CACHE
-            = new GenCache<Class<?>, List<ExtPropertyAccessor>>(new GenCache.LookupProvider<Class<?>, List<ExtPropertyAccessor>>() {
-                @Override
-                public List<ExtPropertyAccessor> lookup(Class<?> k) {
-                    return introspectInternal(k);
-                }
-
-            });
+    private static final AutoMap<Class<?>, List<ExtPropertyAccessor>> CACHE = new AutoMap<>() {
+        @Override
+        public List<ExtPropertyAccessor> create(Class<?> key) {
+            return introspectInternal(key);
+        }
+    };
 
     /**
      * Introspect a given class and find all accessible properties
@@ -449,21 +423,30 @@ public class ReflectUtil {
     }
 
     private static List<ExtPropertyAccessor> introspectInternal(Class<?> tClass) {
-        AutoInitMap<String, ExtPropertyAccessor> mcoll
-                = new AutoInitMap<String, ExtPropertyAccessor>(
-                        new HashMap<String, ExtPropertyAccessor>(),
-                        TransformerCollection.constructorCall(String.class, ExtPropertyAccessor.class));
+        final Map<String, ExtPropertyAccessor> mcoll = new HashMap<>();
 
         try {
-            for (PropertyDescriptor pd : java.beans.Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors()) {
-                if (pd.getReadMethod() != null) {
-                    mcoll.get(pd.getName().toUpperCase()).setReadMethod(pd.getReadMethod());
-                    mcoll.get(pd.getName().toUpperCase()).setWriteMethod(pd.getWriteMethod());
-                }
-            }
-        } catch (IntrospectionException e) {
-            throw new RuntimeException(e);
+            mcoll.putAll(
+                Arrays.asList(java.beans.Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
+                        .stream()
+                        .map(pd -> {
+                            try {
+                                ExtPropertyAccessor pa = new ExtPropertyAccessor(pd.getName());
+                                pa.setReadMethod(pd.getReadMethod());
+                                pa.setWriteMethod(pd.getWriteMethod());
+                                return pa;
+                            } catch (Exception ex) {
+                                return null;
+                            }
+                        })
+                        .filter(Objects::nonNull)
+                        .collect(Collectors.toMap(pa -> pa.getName(), pa -> pa))
+            );
+            
+        } catch (IntrospectionException ex) {
+            LOG.log(Level.SEVERE, "intorspection failed, try to go ahead without Bean introspection" , ex);
         }
+
         HashSet<String> beanInfoProps = new HashSet<String>(mcoll.keySet());
 
         for (Method m : tClass.getDeclaredMethods()) {
@@ -475,27 +458,36 @@ public class ReflectUtil {
                         continue;
                     }
 
-                    propName = propName.toUpperCase();//.substring(0, 1).toLowerCase() + propName.substring(1);
-                    if (beanInfoProps.contains(propName)) {
-                        continue;
-                    }
+                    final String prefix = matcher.group(1);
+                    int methodType;
 
-                    String prefix = matcher.group(1);
-                    boolean isWriteMethod = prefix.equals("set");
-                    if (isWriteMethod && m.getParameterTypes().length != 1) {
-                        continue;
-                    }
-                    if (!isWriteMethod && m.getParameterTypes().length != 0) {
-                        continue;
-                    }
-                    if (!isWriteMethod && m.getReturnType().equals(Void.TYPE)) {
-                        continue;
-                    }
-
-                    if (isWriteMethod) {
-                        mcoll.get(propName).setWriteMethod(m);
+                    if (prefix.equals("set") && m.getParameterTypes().length == 1 && m.getReturnType().equals(Void.TYPE)) {
+                        methodType = 1;
+                    } else if (prefix.equals("get") && m.getParameterTypes().length == 0 && !m.getReturnType().equals(Void.TYPE)) {
+                        methodType = 2;
+                    } else if (prefix.equals("is") && m.getParameterTypes().length == 0 && m.getReturnType().equals(Boolean.TYPE)) {
+                        methodType = 3;
                     } else {
-                        mcoll.get(propName).setReadMethod(m);
+                        continue;
+                    }
+
+                    if (!beanInfoProps.contains(propName)) {
+                        final ExtPropertyAccessor prop = new ExtPropertyAccessor(propName);
+                        if (methodType == 1) {
+                            prop.setWriteMethod(m);
+                        } else {
+                            prop.setReadMethod(m);
+                        }
+                        mcoll.put(propName, prop);
+                        continue;
+                    } else {
+                        final ExtPropertyAccessor prop = mcoll.get(propName);
+
+                        if (!prop.isWritable() && methodType == 1) {
+                            prop.setWriteMethod(m);
+                        } else if (prop.getReadMethod() != null || methodType <= 1) {
+                            prop.setReadMethod(m);
+                        }
                     }
                 }
             }
@@ -506,12 +498,13 @@ public class ReflectUtil {
                 continue;
             }
             int modifier = f.getModifiers();
-            String name = f.getName().toUpperCase();
+            String name = f.getName();
             Class<?> type = f.getType();
+
             if (Modifier.isPublic(modifier)) {
                 ExtPropertyAccessor property = mcoll.get(name);
                 property.setPublicField(f);
-            } else if (mcoll.containsKey(name)) {
+            } else {
                 ExtPropertyAccessor property = mcoll.get(name);
                 Class<?> propertyType;
                 try {
@@ -524,19 +517,12 @@ public class ReflectUtil {
                 }
             }
         }
+        return mcoll.values().stream()
+                .filter(pa -> pa.getReadMethod() != null || pa.getPublicField() != null)
+                .collect(Collectors.toUnmodifiableList());
 
-        ArrayList<ExtPropertyAccessor> res = CollectionUtil.applyFilter(
-                mcoll.values(),
-                new Filter<ExtPropertyAccessor>() {
-            @Override
-            public boolean matches(ExtPropertyAccessor t) {
-                return t.getReadMethod() != null || t.getPublicField() != null;
-            }
-
-        });
-
-        return Collections.unmodifiableList(res);
     }
+
 
     public static Class<?> resolveGenericType(Class<?> clazz) {
         return resolveGenericType(clazz, 0, Object.class);

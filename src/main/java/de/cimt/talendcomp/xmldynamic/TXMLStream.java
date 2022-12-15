@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import javax.xml.bind.JAXBException;
+import jakarta.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
 
 public class TXMLStream<T extends TXMLObject> {
@@ -65,7 +65,7 @@ public class TXMLStream<T extends TXMLObject> {
     }
 
     public TXMLStream(QName fqname, OutputStream out, int size) {
-        queue = new ArrayBlockingQueue<T>(size, true);
+        queue = new ArrayBlockingQueue<T>(1024, true);
         this.out = out;
         this.fqname = fqname;
 

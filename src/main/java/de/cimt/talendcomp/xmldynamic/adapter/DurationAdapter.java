@@ -1,7 +1,7 @@
 package de.cimt.talendcomp.xmldynamic.adapter;
 
 import java.util.Date;
-import javax.xml.bind.annotation.adapters.XmlAdapter;
+import jakarta.xml.bind.annotation.adapters.XmlAdapter;
 import javax.xml.datatype.DatatypeFactory;
 
 /**
