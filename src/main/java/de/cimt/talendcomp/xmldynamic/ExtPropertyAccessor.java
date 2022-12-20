@@ -217,6 +217,7 @@ public class ExtPropertyAccessor {
         if (writeMethod != null) {
             try {
                 writeMethod.invoke(invokee, new Object[]{ value });
+                return;
             } catch (IllegalArgumentException | IllegalAccessException | InvocationTargetException e) {
             }
         }  
@@ -227,7 +228,7 @@ public class ExtPropertyAccessor {
         try {
             f.set(invokee, value);
         } catch (IllegalArgumentException | IllegalAccessException e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException("error setting property "+getName(), e);
         }
     }
     

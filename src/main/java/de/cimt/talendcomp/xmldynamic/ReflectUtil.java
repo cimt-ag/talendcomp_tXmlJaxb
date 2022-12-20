@@ -228,7 +228,7 @@ public class ReflectUtil {
                 return convert(Boolean.toString(((Number) v).intValue() == 1), String.class, tClass);
             }
             
-            System.err.println("convert failed: convert "+vClass.getName()+" with value "+v+" to class "+tClass.getName());
+            LOG.warning("convert failed: convert "+vClass.getName()+" with value "+v+" to class "+tClass.getName());
             throw new RuntimeException(uoe);
         }
     }
@@ -410,7 +410,7 @@ public class ReflectUtil {
          */
         Map<String, ExtPropertyAccessor> res = new HashMap<String, ExtPropertyAccessor>();
         for (ExtPropertyAccessor pa : all) {
-            final String name = pa.getName().toUpperCase();
+            final String name = pa.getName();
             if (!res.containsKey(name)) {
                 res.put(name, pa);
             } else {
@@ -432,7 +432,9 @@ public class ReflectUtil {
                         .map(pd -> {
                             try {
                                 ExtPropertyAccessor pa = new ExtPropertyAccessor(pd.getName());
+                                LOG.finest("A) set read method " +pd.getReadMethod());
                                 pa.setReadMethod(pd.getReadMethod());
+                                LOG.finest("A) set write method " +pd.getWriteMethod());
                                 pa.setWriteMethod(pd.getWriteMethod());
                                 return pa;
                             } catch (Exception ex) {
@@ -474,8 +476,10 @@ public class ReflectUtil {
                     if (!beanInfoProps.contains(propName)) {
                         final ExtPropertyAccessor prop = new ExtPropertyAccessor(propName);
                         if (methodType == 1) {
+                            LOG.finest("b) set write method " +m);
                             prop.setWriteMethod(m);
                         } else {
+                            LOG.finest("b) set read method " +m);
                             prop.setReadMethod(m);
                         }
                         mcoll.put(propName, prop);
@@ -484,8 +488,10 @@ public class ReflectUtil {
                         final ExtPropertyAccessor prop = mcoll.get(propName);
 
                         if (!prop.isWritable() && methodType == 1) {
+                            LOG.finest("c) set write method " +m);
                             prop.setWriteMethod(m);
-                        } else if (prop.getReadMethod() != null || methodType <= 1) {
+                        } else if (prop.getReadMethod() == null && methodType > 1) {
+                            LOG.finest("c) set read method " +m);
                             prop.setReadMethod(m);
                         }
                     }
@@ -612,7 +618,7 @@ public class ReflectUtil {
                     sb.append(Character.toUpperCase(c));
                     lastWasUnderScore = false;
                 } else if (isFirstChar) {
-                    sb.append(Character.toLowerCase(c));
+                    sb.append( Character.toLowerCase(c) );
                 } else {
                     sb.append(c);
                 }

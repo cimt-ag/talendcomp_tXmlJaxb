@@ -64,6 +64,8 @@ public abstract class TXMLObject implements Serializable, Cloneable {
 
     private ExtPropertyAccessor getPropertyAccessorByName(String attr){
         final Collection<ExtPropertyAccessor> props = CACHE.get(this.getClass()).values();
+        if(LOG.isLoggable(Level.FINEST))
+            props.stream().forEach( p -> LOG.finest("\n*********************************\n"+p) );
         
         ExtPropertyAccessor pa= props.stream()
                     .filter( e -> e.getName().equalsIgnoreCase(attr) )
@@ -80,14 +82,18 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             })
             protected List<de.cimt.customer.Address> addressOrPoaddress;
         */
-        return props.stream()
-                .collect( Collectors.toMap( e -> e, e -> e.findAnnotation(TXMLTypeHelper.class)))
-                .entrySet().stream()
-                .filter( e -> e.getValue()!=null 
-                        && Arrays.asList( e.getValue().refs() )
-                                .stream().filter( ref -> ref.name().equalsIgnoreCase(attr)).findFirst().orElse(null)!=null )
-                .map( e -> e.getKey() )
-                .findFirst().orElse(null);
+        
+        for(ExtPropertyAccessor pp : props){
+            final TXMLTypeHelper th = pp.findAnnotation(TXMLTypeHelper.class);
+            if(th==null)
+                continue;
+            for(QNameRef ref : th.refs()){
+                if(ref.name().equalsIgnoreCase(attr))
+                    return pp;
+            }
+        }
+
+        return null;
     }
     
     @XmlTransient
@@ -149,8 +155,8 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             return false;
     	}
         if (Collection.class.isAssignableFrom(attr.getPropertyType()))  
-            return add(attr, childObject.getClass(), childObject);
-        return set(attr, childObject.getClass(), childObject);
+            return internalAdd(attr, childObject.getClass(), childObject);
+        return internalSet(attr, childObject.getClass(), childObject);
     }
     
     @SuppressWarnings({ "unchecked", "rawtypes" })
@@ -163,9 +169,9 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             return false;
         }
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
-            return set(pa , getCollectionTargetType(pa, attr), value);
+            return internalSet(pa , getCollectionTargetType(pa, attr), value);
         }
-        return set(pa, pa.getPropertyType(), value);
+        return internalSet(pa, pa.getPropertyType(), value);
     }
     
     private Class<?> getCollectionTargetType(final ExtPropertyAccessor accessor, final String name){
@@ -177,19 +183,22 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         return Stream.of( anno.refs() ).filter( ref -> ref.name().equalsIgnoreCase(name) ).map( ref -> ref.type() ).findFirst().orElse(null);
     }
     
-    private boolean set(ExtPropertyAccessor pa, Class<?> type, Object value){
+    private boolean internalSet(ExtPropertyAccessor pa, Class<?> type, Object value){
+        LOG.warning("internalSet "+pa.getName()+" to type "+type+" value="+value);
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
          */
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
             ((Collection) pa.getPropertyValue(this)).clear();
-            return add(pa, type, value);
+            return internalAdd(pa, type, value);
         }
+        LOG.finer("convert "+value+" to type "+type);
         pa.setPropertyValue(this, ReflectUtil.convert(value, type));
         return true;
     }
-   private boolean add(ExtPropertyAccessor pa, Class<?> type, Object value){
+   private boolean internalAdd(ExtPropertyAccessor pa, Class<?> type, Object value){
+        LOG.warning("internalAdd "+pa.getName()+" to type "+type+" value="+value);
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
