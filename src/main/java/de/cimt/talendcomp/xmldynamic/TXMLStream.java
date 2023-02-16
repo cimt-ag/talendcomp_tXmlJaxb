@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.TimeUnit;
-import jakarta.xml.bind.JAXBException;
+//import jakarta.xml.bind.JAXBException;
 import javax.xml.namespace.QName;
 
 public class TXMLStream<T extends TXMLObject> {
@@ -45,9 +45,8 @@ public class TXMLStream<T extends TXMLObject> {
                         try {
                             out.write(queue.poll(10, TimeUnit.SECONDS).toXML(formatted, true).getBytes());
                             out.flush();
-                        } catch (JAXBException ex) {
+                        } catch (Exception ex) {
                             throw new IOException(ex);
-                        } catch (InterruptedException ex) {
                         }
                     }
                 }

@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.cimt.talendcomp</groupId>
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
-    <version>22.12</version>
+    <version>23.1</version>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
     
     <issueManagement>
@@ -17,6 +17,8 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.build.componentProjectDirectory>talend_component/tXmlJaxbModel/</project.build.componentProjectDirectory>
+        <bind.version>4.0.1</bind.version>
+        <!--<bind.version>3.0.2</bind.version>-->
     </properties>
     <build>
         <plugins>
@@ -49,7 +51,7 @@
             <plugin>
                 <groupId>de.cimt.talendcomp</groupId>
                 <artifactId>cimt-talendcomp-maven-plugin</artifactId>
-                <version>3.2</version>
+                <version>3.1</version>
                 <configuration>
                     <componentBaseDir>target/talend_component/</componentBaseDir>
                     <copyFromSourceBaseDir>src/main/talend_component</copyFromSourceBaseDir>
@@ -63,6 +65,18 @@
                         </goals>
                         <configuration>
                             <componentName>tXmlJaxbModel</componentName>
+                            <compDependencies>
+                                <compDependency>
+                                    <groupId>com.sun.xml.bind</groupId>
+                                    <artifactId>jaxb-core</artifactId>
+                                    <version>${bind.version}</version>
+                                </compDependency>
+                                <compDependency>
+                                    <groupId>org.colllib</groupId>
+                                    <artifactId>colllib</artifactId>
+                                    <version>1.6</version>        
+                                </compDependency>
+                            </compDependencies>
                         </configuration>
                     </execution>
                     <execution>
@@ -103,38 +117,33 @@
         </plugins>
     </build>
     <dependencies>
-        <!-- jakarta/JAXB APIs -->
+        <!-- jakarta/JAXB APIs 
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
             <version>4.0.0</version>
             <type>jar</type>
         </dependency>
-        <!-- JAXB RI -->
+        -->
+        <!-- JAXB RI 
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>
             <version>4.0.0</version>
         </dependency>
-        
+        -->
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-core</artifactId>
-            <version>4.0.1</version>
+            <version>${bind.version}</version>
         </dependency>
         
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-xjc</artifactId>
-            <version>4.0.1</version>
+            <version>${bind.version}</version>
         </dependency>
       
-        <dependency>
-            <groupId>de.cimt.utils</groupId>
-            <artifactId>TypeConversion</artifactId>
-            <version>1.0</version>
-        </dependency>
-        
         <dependency>
             <groupId>de.cimt.utils</groupId>
             <artifactId>TypeConversion</artifactId>

@@ -6,14 +6,12 @@ import java.beans.PropertyDescriptor;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.lang.reflect.Array;
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -27,7 +25,6 @@ import javax.xml.datatype.XMLGregorianCalendar;
 
 import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
-import java.util.Arrays;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -184,7 +181,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     }
     
     private boolean internalSet(ExtPropertyAccessor pa, Class<?> type, Object value){
-        LOG.warning("internalSet "+pa.getName()+" to type "+type+" value="+value);
+        LOG.finer("internalSet "+pa.getName()+" to type "+type+" value="+value);
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
@@ -198,7 +195,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         return true;
     }
    private boolean internalAdd(ExtPropertyAccessor pa, Class<?> type, Object value){
-        LOG.warning("internalAdd "+pa.getName()+" to type "+type+" value="+value);
+        LOG.finer("internalAdd "+pa.getName()+" to type "+type+" value="+value);
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....

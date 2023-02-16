@@ -259,11 +259,11 @@ public final class ModelBuilder {
             URI uri= (opt.createJar && opt.jarFilePath!=null) ? new File(opt.jarFilePath).toURI() : opt.targetDir.toURI();
             
             
-            LOG.warning("extend Classpath using " + ( (opt.createJar && opt.jarFilePath!=null) ? opt.jarFilePath : opt.targetDir) );
+            LOG.fine("extend Classpath using " + ( (opt.createJar && opt.jarFilePath!=null) ? opt.jarFilePath : opt.targetDir) );
             Util.register(uri, (opt.createJar && opt.jarFilePath!=null) );
 
     	} else {
-            LOG.warning("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
+            LOG.fine("Model for schema file: " + opt.grammarFilePath + " already generated, skip generate step.");
     	}
         
     }

@@ -21,10 +21,7 @@ import java.util.UUID;
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
-import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import javax.xml.namespace.QName;
@@ -188,12 +185,12 @@ public final class Util {
             String[] names = buf.toString().split("\n");
             for (int i = 0, max = names.length; i < max; i++) {
                 final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.warning("lookup service "+value);
+                LOG.finer("lookup service "+value);
                 if(value.length()==0)
                     continue;
                 if(OSGI){
                     TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).getConstructor().newInstance();
-                    LOG.warning("bindingInstance="+bindingInstance);
+                    LOG.finer("bindingInstance="+bindingInstance);
                     BINDINGS.add( bindingInstance );
                 }
             }

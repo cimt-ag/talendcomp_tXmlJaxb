@@ -16,15 +16,20 @@
     </xsd:element>
     
     <xsd:annotation>
-        <xsd:documentation source="ddex:Definition">A Territory to which the SoundRecording details apply. Either this Element or ExcludedTerritory shall be present, but not both. The use of ISO TerritoryCodes (or the term 'Worldwide”) is strongly encouraged; TIS TerritoryCodes should only be used if both MessageSender and MessageRecipient are familiar with this standard. </xsd:documentation>
+        <xsd:documentation source="Definition">
+            A Territory to which the SoundRecording details apply. Either this Element or ExcludedTerritory shall be present, 
+            but not both. The use of ISO TerritoryCodes (or the term 'Worldwide”) is strongly encouraged; TIS TerritoryCodes 
+            should only be used if both MessageSender and MessageRecipient are familiar with this standard. 
+        </xsd:documentation>
     </xsd:annotation>
     
-    <xsd:complexType name="address">
+    <xsd:complexType name="addressType">
         <xsd:sequence>
             <xsd:element name="id" type="xsd:int" minOccurs="1" maxOccurs="1"/>
             <xsd:element name="street" type="xsd:string" minOccurs="0"/>
-            <xsd:element name="_house_number" type="xsd:integer" minOccurs="0" maxOccurs="unbounded"/>
+            <xsd:element name="house_number" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>
             <xsd:element name="city" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="country" type="xsd:string" minOccurs="0"/>
         </xsd:sequence>
     </xsd:complexType>
 
@@ -34,8 +39,8 @@
                 <xsd:element name="id" type="idvalues" minOccurs="0"/>
                 <xsd:element name="name" type="xsd:string" minOccurs="0"/>
                 <xsd:choice minOccurs="1" maxOccurs="unbounded">
-                    <xsd:element name="address" type="address" />
-                    <xsd:element name="poaddress" type="address" />
+                    <xsd:element name="address" type="addressType" />
+                    <xsd:element name="poaddress" type="addressType" />
                 </xsd:choice>
                 <xsd:element name="age" type="xsd:date" minOccurs="0"/>
                 <xsd:element name="title" type="xsd:string" minOccurs="0" maxOccurs="unbounded"/>

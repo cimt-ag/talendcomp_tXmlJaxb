@@ -104,7 +104,7 @@ public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileMa
                 .map( c -> {
                     try {
                         URI nu=new URI(packageLocation.toString() + (packaged ? "!/" : "") + c);
-                        LOG.warning("register " + nu);
+                        LOG.fine("register " + nu);
                         return new InlineJavaFileObject(nu);
                     } catch (URISyntaxException e) {
                         e.printStackTrace();
@@ -141,12 +141,12 @@ public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileMa
 */
     //@Override
     public Iterable<JavaFileObject> list1(Location location, String packageName, Set<JavaFileObject.Kind> kinds, boolean recurse) throws IOException {
-        LOG.warning("list( " + location + ", " + packageName + ", " + kinds.stream().map(k -> k.name()).collect(Collectors.toList()) + ", " + recurse + " )");
+        LOG.fine("list( " + location + ", " + packageName + ", " + kinds.stream().map(k -> k.name()).collect(Collectors.toList()) + ", " + recurse + " )");
         return super.list(location, packageName, kinds, recurse);
     }
 
     public Iterable<JavaFileObject> list(Location location, String packageName, Set<JavaFileObject.Kind> kinds, boolean recurse) throws IOException {
-        LOG.warning("list( " + location + ", " + packageName + ", " + kinds.stream().map(k -> k.name()).collect(Collectors.toList()) + ", " + recurse + " )");
+        LOG.fine("list( " + location + ", " + packageName + ", " + kinds.stream().map(k -> k.name()).collect(Collectors.toList()) + ", " + recurse + " )");
         if( location!= StandardLocation.CLASS_PATH || !packageName.startsWith("de.cimt.talendcomp.xmldynamic") ) {
             return super.list(location, packageName, kinds, recurse);
         }
@@ -158,7 +158,7 @@ public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileMa
         //list( CLASS_PATH, de.cimt.talendcomp, [SOURCE, CLASS], false )
 
 
-        LOG.warning("packageName =" + packageName );
+        LOG.fine("packageName =" + packageName );
             StringBuffer b = new StringBuffer();
             final AtomicInteger cnt=new AtomicInteger();
             i.forEach(e -> {
