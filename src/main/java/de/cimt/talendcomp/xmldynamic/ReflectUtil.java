@@ -457,6 +457,7 @@ public class ReflectUtil {
 
         HashSet<String> beanInfoProps = new HashSet<String>(mcoll.keySet());
 
+        // TODO: test this part and change the logic
         for (Method m : tClass.getDeclaredMethods()) {
             if (Modifier.isPublic(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) {
                 Matcher matcher = MPAT.matcher(m.getName());
