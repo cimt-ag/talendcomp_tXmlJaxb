@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <groupId>de.cimt.talendcomp</groupId>
     <artifactId>cimt-talendcomp-xmldynamic</artifactId>
-    <version>23.1</version>
+    <version>0.7</version>
     <name>de.cimt.talendcomp.xmldynamic [${project.version}]</name>
     
     <issueManagement>
@@ -66,11 +66,11 @@
                         <configuration>
                             <componentName>tXmlJaxbModel</componentName>
                             <compDependencies>
-                                <compDependency>
+                                <!--compDependency>
                                     <groupId>com.sun.xml.bind</groupId>
                                     <artifactId>jaxb-core</artifactId>
                                     <version>${bind.version}</version>
-                                </compDependency>
+                                </compDependency-->
                                 <compDependency>
                                     <groupId>org.colllib</groupId>
                                     <artifactId>colllib</artifactId>
@@ -117,7 +117,7 @@
         </plugins>
     </build>
     <dependencies>
-        <!-- jakarta/JAXB APIs 
+        <!-- jakarta/JAXB APIs
         <dependency>
             <groupId>jakarta.xml.bind</groupId>
             <artifactId>jakarta.xml.bind-api</artifactId>
@@ -125,23 +125,23 @@
             <type>jar</type>
         </dependency>
         -->
-        <!-- JAXB RI 
+        <!-- JAXB RI -->
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-impl</artifactId>
             <version>4.0.0</version>
         </dependency>
-        -->
-        <dependency>
-            <groupId>com.sun.xml.bind</groupId>
-            <artifactId>jaxb-core</artifactId>
-            <version>${bind.version}</version>
-        </dependency>
-        
+
         <dependency>
             <groupId>com.sun.xml.bind</groupId>
             <artifactId>jaxb-xjc</artifactId>
             <version>${bind.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.glassfish.jaxb</groupId>
+            <artifactId>jaxb-core</artifactId>
+            <version>4.0.0</version>
         </dependency>
       
         <dependency>

@@ -67,7 +67,6 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         ExtPropertyAccessor pa= props.stream()
                     .filter( e -> e.getName().equalsIgnoreCase(attr) )
                     .findFirst().orElse(null);
-        
         if(pa!=null)
             return pa;
         
@@ -96,7 +95,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     @XmlTransient
     private static final Map<Class<?>, Map<String, ExtPropertyAccessor>> CACHE = new AutoMap<Class<?>, Map<String, ExtPropertyAccessor>>(){
         @Override
-        public Map<String, ExtPropertyAccessor> create(Class<?> key) {
+        public synchronized Map<String, ExtPropertyAccessor> create(Class<?> key) {
             return ReflectUtil.introspect(key, Object.class).stream()
                     .collect( Collectors.toMap(pa -> pa.getName(), pa -> pa));
         }
@@ -165,6 +164,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if(pa==null){
             return false;
         }
+        System.err.println("Property Type: " + pa.getPropertyType());
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
             return internalSet(pa , getCollectionTargetType(pa, attr), value);
         }
@@ -182,6 +182,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     
     private boolean internalSet(ExtPropertyAccessor pa, Class<?> type, Object value){
         LOG.finer("internalSet "+pa.getName()+" to type "+type+" value="+value);
+        //System.err.println("internalSet "+pa.getName()+" to type "+type+" value="+value);
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
@@ -191,6 +192,8 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             return internalAdd(pa, type, value);
         }
         LOG.finer("convert "+value+" to type "+type);
+        // happens here
+        System.err.println("this class: " + this.getClass().getName());
         pa.setPropertyValue(this, ReflectUtil.convert(value, type));
         return true;
     }
@@ -238,7 +241,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-//    	attr = ReflectUtil.camelizeName(attr);
+    	//attr = ReflectUtil.camelizeName(attr);
         ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         Object value = null;
         if (pa == null) {
@@ -274,6 +277,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
     	//attr = ReflectUtil.camelizeName(attr);
+        System.err.println("orginial attr: " + attr);
         ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
         if (pa == null) {
             if (attr.indexOf("/") > 0) {
@@ -299,6 +303,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             ((List) currentValue).add(value);
             return true;
         }
+        // --> property not writeable
         return set(attr, value);
     }
 

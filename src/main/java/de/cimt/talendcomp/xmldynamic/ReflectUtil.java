@@ -2,6 +2,7 @@ package de.cimt.talendcomp.xmldynamic;
 
 import de.cimt.utils.conversion.Converter;
 import java.beans.IntrospectionException;
+import java.beans.Introspector;
 import java.beans.PropertyDescriptor;
 import java.io.File;
 import java.io.InputStream;
@@ -380,7 +381,7 @@ public class ReflectUtil {
 
     private static final AutoMap<Class<?>, List<ExtPropertyAccessor>> CACHE = new AutoMap<>() {
         @Override
-        public List<ExtPropertyAccessor> create(Class<?> key) {
+        public synchronized List<ExtPropertyAccessor> create(Class<?> key) {
             return introspectInternal(key);
         }
     };
@@ -400,6 +401,7 @@ public class ReflectUtil {
         Class<?> current = tClass;
 
         while (current != null && !current.equals(stopclass)) {
+            System.err.println("Current: " + CACHE.get(current));
             all.addAll(CACHE.get(current));
             current = current.getSuperclass();
         }
@@ -410,7 +412,11 @@ public class ReflectUtil {
          */
         Map<String, ExtPropertyAccessor> res = new HashMap<String, ExtPropertyAccessor>();
         for (ExtPropertyAccessor pa : all) {
-            final String name = pa.getName();
+            System.err.println("pa name: " + pa.getName());
+            System.err.println("Read: " + pa.getReadMethod());
+            System.err.println("Write: " + pa.getWriteMethod());
+            // XK: bad idea?
+            final String name = pa.getName().substring(0, 1).toLowerCase() + pa.getName().substring(1);
             if (!res.containsKey(name)) {
                 res.put(name, pa);
             } else {
@@ -427,7 +433,7 @@ public class ReflectUtil {
 
         try {
             mcoll.putAll(
-                Arrays.asList(java.beans.Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
+                Arrays.asList(Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
                         .stream()
                         .map(pd -> {
                             try {

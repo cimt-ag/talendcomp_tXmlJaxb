@@ -214,6 +214,7 @@ public class ExtPropertyAccessor {
      * @param value the new value
      */
     public void setPropertyValue(Object invokee, Object value) {
+        System.err.println("write method: " + writeMethod);
         if (writeMethod != null) {
             try {
                 writeMethod.invoke(invokee, new Object[]{ value });
