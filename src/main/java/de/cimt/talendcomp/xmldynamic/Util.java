@@ -22,8 +22,10 @@ import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
 import jakarta.xml.bind.Unmarshaller;
 import java.lang.reflect.InvocationTargetException;
+import java.net.MalformedURLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 import javax.xml.namespace.QName;
 
 public final class Util {
@@ -59,13 +61,12 @@ public final class Util {
 
         @Override
         public Class<?> loadClass(final String name) throws ClassNotFoundException, NoClassDefFoundError {
-            Throwable ex=null;
             try{
                 return super.loadClass(name, true);
             }catch(ClassNotFoundException | java.lang.NoClassDefFoundError cnfe){
                 try{
                     return performBundleLookup(name);
-                }catch(Throwable t){
+                }catch(ClassNotFoundException t){
                     throw cnfe;
                 }
             }
@@ -88,11 +89,10 @@ public final class Util {
         }
         LOG.fine("--------------------");
         LOG.fine(classLoader.toString());
-        if (classLoader instanceof URLClassLoader) {
-            URLClassLoader ucl = (URLClassLoader) classLoader;
+        if (classLoader instanceof URLClassLoader ucl) {
             int i = 0;
             for (URL url : ucl.getURLs()) {
-                LOG.info("url[" + (i++) + "]=" + url);
+                LOG.log(Level.INFO, "url[{0}]={1}", new Object[]{i++, url});
             }
             
         }
@@ -105,13 +105,13 @@ public final class Util {
     static{
         Method m;
         boolean isOSGI=false;
-        XSDClassLoader cl=null;
+        XSDClassLoader cl;
         final ClassLoader classLoader = Util.class.getClassLoader();
             
         try{
             Class<?> cb=Class.forName("org.eclipse.osgi.internal.loader.ModuleClassLoader");
             
-            LOG.finer("classLoader :" + classLoader.getClass() );
+            LOG.log(Level.FINER, "classLoader :{0}", classLoader.getClass());
             if(classLoader.getClass().equals(cb) ){
                 isOSGI=true;
                 
@@ -134,7 +134,7 @@ public final class Util {
         
         OSGI=isOSGI;
         BINDINGS= new ArrayList<TXMLBinding>();
-        LOG.finer("OSGI = "+OSGI);
+        LOG.log(Level.FINER, "OSGI = {0}", OSGI);
         LOADER=cl;
     }
 
@@ -149,7 +149,8 @@ public final class Util {
     public static TXMLObject createTXMLObject(String name) throws Exception{
         try {
             return ((Class<TXMLObject>) findClass(name)).newInstance();
-        } catch (Exception ex) {
+//            return ((Class<TXMLObject>) findClass(name)).getConstructor().newInstance();
+        } catch (ClassNotFoundException | IllegalAccessException | InstantiationException ex) {
             LOG.log(Level.SEVERE, "Error instantiating class "+name, ex);
             throw ex;
         }
@@ -169,13 +170,11 @@ public final class Util {
         
         try{
             LOADER.addURL( uri.toURL() );
-        }catch(Throwable t){
+        }catch(MalformedURLException t){
             LOG.log(Level.SEVERE, "adding class failed",t);
         }
 
-        InputStream in=null;
-        try{
-            in=serviceuri.toURL().openStream();
+        try(InputStream in = serviceuri.toURL().openStream()) {
             int size;
             byte[] buffer = new byte[2048];
             StringBuilder buf = new StringBuilder();
@@ -185,18 +184,15 @@ public final class Util {
             String[] names = buf.toString().split("\n");
             for (int i = 0, max = names.length; i < max; i++) {
                 final String value = (names[i].contains("#") ? names[i].substring(0, names[i].indexOf("#")) : names[i]).trim();
-                LOG.finer("lookup service "+value);
+                LOG.log(Level.FINER, "lookup service {0}", value);
                 if(value.length()==0)
                     continue;
                 if(OSGI){
                     TXMLBinding bindingInstance=((Class<TXMLBinding>) findClass( value )).getConstructor().newInstance();
-                    LOG.finer("bindingInstance="+bindingInstance);
+                    LOG.log(Level.FINER, "bindingInstance={0}", bindingInstance);
                     BINDINGS.add( bindingInstance );
                 }
             }
-        }finally{
-            if(in!=null)
-                in.close();
         }
         
     }
@@ -248,24 +244,17 @@ public final class Util {
             builder.append(" - is ROOT");
         }
         builder.append("\n");
-        List<ExtPropertyAccessor> listProperties = ReflectUtil.introspect(clazz, TXMLObject.class);
-        for (ExtPropertyAccessor prop : listProperties) {
+        List<PropertyAccessor> listProperties = ReflectUtil.introspect(clazz);
+        for (PropertyAccessor prop : listProperties) {
             builder.append("    ").append(prop.getName()).append(" type: ").append(prop.getPropertyType().getName());
             if(Collection.class.isAssignableFrom(prop.getPropertyType()) ){
-                final TXMLTypeHelper helper = prop.findAnnotation(TXMLTypeHelper.class);
-                if(helper!=null){
-                    builder.append("<");
-                    boolean first=true;
-                    for(QNameRef ref : helper.refs()){
-                        if(!first){
-                            builder.append(" or ");
-                        }
-                        builder.append(ref.type().getName());
-                        first=false;
-                    }
-                    builder.append(">"); 
+                   builder.append("<")
+                        .append(
+                                prop.getAnnotatedTypes().stream().map(tclazz -> tclazz.getName()).collect(Collectors.joining(" or "))
+                        )
+                        .append(">");
                 }
-            }
+            
             
             builder.append("\n");
         }

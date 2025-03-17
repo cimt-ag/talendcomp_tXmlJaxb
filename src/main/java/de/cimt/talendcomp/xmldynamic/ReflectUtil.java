@@ -3,7 +3,6 @@ package de.cimt.talendcomp.xmldynamic;
 import de.cimt.utils.conversion.Converter;
 import java.beans.IntrospectionException;
 import java.beans.Introspector;
-import java.beans.PropertyDescriptor;
 import java.io.File;
 import java.io.InputStream;
 import java.io.Reader;
@@ -28,7 +27,6 @@ import java.util.Collections;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -40,10 +38,11 @@ import java.util.regex.Pattern;
 
 import jakarta.xml.bind.annotation.XmlRootElement;
 import jakarta.xml.bind.util.JAXBResult;
-import java.util.Objects;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.xml.datatype.DatatypeConfigurationException;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.Duration;
@@ -60,14 +59,16 @@ import org.w3c.dom.Node;
 
 /**
  *
- * Angepasste aus Colllib um die bestehenden Funktionen zu erweitern
- * TODO: let us enhance the collib library
+ * Angepasste aus Colllib um die bestehenden Funktionen zu erweitern TODO: let
+ * us enhance the collib library
  */
 public class ReflectUtil {
 
-	private static boolean printDebugInfo = false;
+    private static boolean printDebugInfo = false;
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
-	
+    private static final Pattern MPAT = Pattern.compile("(get|is|set)(.*)");
+
+    // <editor-fold defaultstate="collapsed" desc="type conversion">
     @SuppressWarnings({"unchecked", "rawtypes"})
     public static Number convertNumber(String text, Class type) throws ParseException {
         Number numb = null;
@@ -127,7 +128,7 @@ public class ReflectUtil {
         try {
             Source s = null;
             if (CharSequence.class.isAssignableFrom(vClass)) {
-                s = new StreamSource( new StringReader(((CharSequence) v).toString()) );
+                s = new StreamSource(new StringReader(((CharSequence) v).toString()));
             }
             if (Node.class.isAssignableFrom(vClass)) {
                 s = new DOMSource((Node) v);
@@ -163,6 +164,7 @@ public class ReflectUtil {
      * Convert an object to type tClass This Methods also allows Numbers in
      * localized format and customizations of enum values (like XmlEnumValue).
      *
+     * @param <T>
      * @param v the object to convert
      * @param tClass target class
      * @return v the converted object of type tClass
@@ -183,7 +185,7 @@ public class ReflectUtil {
      *
      * @param <T> wildcard type of targettype
      * @param v the object to convert
-     * @param vClass class of value v 
+     * @param vClass class of value v
      * @param tClass target class
      * @return v the converted object of type tClass
      * @exception java.lang.UnsupportedOperationException in case of any error
@@ -228,8 +230,8 @@ public class ReflectUtil {
             } else if ((Boolean.class.equals(tClass) || boolean.class.equals(tClass)) && Number.class.isAssignableFrom(vClass)) {
                 return convert(Boolean.toString(((Number) v).intValue() == 1), String.class, tClass);
             }
-            
-            LOG.warning("convert failed: convert "+vClass.getName()+" with value "+v+" to class "+tClass.getName());
+
+            LOG.warning("convert failed: convert " + vClass.getName() + " with value " + v + " to class " + tClass.getName());
             throw new RuntimeException(uoe);
         }
     }
@@ -250,12 +252,12 @@ public class ReflectUtil {
                             Method m = DatatypeFactory.class.getMethod("newDurationYearMonth", vClass);
                             return (Duration) m.invoke(dtf, v);
                         } catch (IllegalArgumentException nnex) {
-                        	// ignore intentionally
+                            // ignore intentionally
                         }
                     }
                 }
             } catch (NoSuchMethodException ex) {
-            	// ignore intentionally
+                // ignore intentionally
             }
         }
         Calendar cal = null;
@@ -336,23 +338,21 @@ public class ReflectUtil {
         }
         return null;
     }
+// </editor-fold>
 
-    public static List<Field> getAllFields(Class<?> c) {
+    public Stream<Field> getAllFields(Class<?> c) {
         return getAllFields(c, Object.class);
     }
 
-    public static List<Field> getAllFields(Class<?> c, Class<?> stopclass) {
-        List<Field> fields = new ArrayList<Field>();
-        if (c != null && !c.equals(stopclass)) {
-            fields.addAll(getAllFields(c.getSuperclass()));
-
-            for (Field f : c.getDeclaredFields()) {
-                if (!Modifier.isStatic(f.getModifiers())) {
-                    fields.add(f);
-                }
-            }
+    private Stream<Field> getAllFields(Class<?> c, Class<?> stopclass) {
+        if (c == null || c.equals(stopclass)) {
+            return Stream.empty();
         }
-        return fields;
+
+        return Stream.concat(
+                Arrays.stream(c.getDeclaredFields()).filter(f -> !Modifier.isStatic(f.getModifiers())), getAllFields(c.getSuperclass(), stopclass)
+        );
+//                .filter( f -> !Modifier.isStatic(f.getModifiers())) ;
     }
 
     public static <T extends Annotation> T getClassAnnotation(Class<?> cl, Class<T> anno) {
@@ -375,88 +375,109 @@ public class ReflectUtil {
         return findAnnotatedMethod(type.getSuperclass(), anno);
     }
 
-   
-
-    private static final Pattern MPAT = Pattern.compile("(get|is|set)(.*)");
-
-    private static final AutoMap<Class<?>, List<ExtPropertyAccessor>> CACHE = new AutoMap<>() {
+    private static final Map<Class<?>, List<PropertyAccessor>> CACHE = new HashMap<>() {
         @Override
-        public synchronized List<ExtPropertyAccessor> create(Class<?> key) {
-            return introspectInternal(key);
+        public List<PropertyAccessor> get(final Object key) {
+            return this.computeIfAbsent(((Class<?>) key), clazz -> {
+                return introspectInternal(clazz).values().stream().filter( pa -> pa.isAccessible() ).collect( Collectors.toList() );
+            } );  
         }
+        
     };
 
     /**
-     * Introspect a given class and find all accessible properties
+     * Introspect a given class and find all accessible properties 
      *
      * @param tClass the class
      * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
      */
-    public static List<ExtPropertyAccessor> introspect(Class<?> tClass) {
-        return introspect(tClass, null);
+    static List<PropertyAccessor> introspect(Class<?> tClass ) {
+        
+        return Collections.unmodifiableList(  CACHE.get(tClass)  );
+    }
+    
+    /**
+     * Introspect a given class and find all accessible properties by name
+     *
+     * @param tClass the class
+     * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
+     */
+    static Map<String, PropertyAccessor> introspectName(Class<?> tClass) {
+
+        final Map<String, PropertyAccessor> result = CACHE.get(tClass).stream().collect(Collectors.toMap(pa -> pa.getName(), pa2 -> pa2));
+
+        for (PropertyAccessor pa : CACHE.get(tClass)) {
+            pa.getAnnotatedAliases().stream().filter(n -> !result.containsKey(n)).forEach(n -> result.put(n, pa));
+        }
+        return result;
+    }
+    /**
+     * Introspect a given class and find all accessible properties by name
+     *
+     * @param tClass the class
+     * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
+     */
+    static Map<Class<?>, PropertyAccessor> introspectType(Class<?> tClass ) {
+        
+        final Map<Class<?>, PropertyAccessor> result =   CACHE.get(tClass).stream().collect( Collectors.toMap( pa  -> pa.getPropertyType(), pa2 -> pa2) );
+        
+        for( PropertyAccessor pa : CACHE.get(tClass)){
+             pa.getAnnotatedTypes().stream().filter( clazz -> !result.containsKey(clazz)).forEach( clazz-> result.put(clazz, pa));
+        } 
+        return result;
     }
 
-    public static List<ExtPropertyAccessor> introspect(Class<?> tClass, Class<?> stopclass) {
-        List<ExtPropertyAccessor> all = new ArrayList<ExtPropertyAccessor>();
-        Class<?> current = tClass;
+    public static Map<String, PropertyAccessor> introspectInternal(Class<?> tClass) {
+        if(Object.class.equals(tClass) || TXMLObject.class.equals(tClass) || tClass==null)
+            return new HashMap<>();
+        
+        
+        final Map<String, PropertyAccessor> mcoll = introspectInternal( tClass.getSuperclass() );
+        System.err.println(" present in class "+tClass.getSimpleName()+":\n" +
+        mcoll.entrySet().stream().map( p -> ( p.getKey() + ":" + p.getValue() ) ).collect( Collectors.joining("\n"))
+                +"\n\n");
+        
+        try {
+            Arrays.stream(Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
+                .forEach(pd -> {
+                    if (!mcoll.containsKey(pd.getName())) {
+                        mcoll.put(pd.getName(), new PropertyAccessor(pd));
+                        return;
+                    }
 
-        while (current != null && !current.equals(stopclass)) {
-            System.err.println("Current: " + CACHE.get(current));
-            all.addAll(CACHE.get(current));
-            current = current.getSuperclass();
+                    PropertyAccessor pa = mcoll.get(pd.getName());
+                    if(pa.isFieldbased() || pd.getPropertyType().equals(pd.getPropertyType())){
+                        // parent field is overwritten by property
+                        mcoll.put(pd.getName(), new PropertyAccessor(pd));
+                        return;
+                    } 
+                           
+                    if (pd.getWriteMethod() != null ) 
+                        pa.setWriteMethod(pd.getWriteMethod());
+
+                    if (pd.getReadMethod() != null) 
+                        pa.setReadMethod(pd.getReadMethod());
+
+                });
+        } catch (IntrospectionException ex) {
+            LOG.log(Level.WARNING, "introspection failed, try to go ahead without Bean introspection", ex);
         }
 
-        /**
-         * prüfen nach doppelter eintragen und zuweisen fehlender methoden und
-         * felder aus basisklasse
-         */
-        Map<String, ExtPropertyAccessor> res = new HashMap<String, ExtPropertyAccessor>();
-        for (ExtPropertyAccessor pa : all) {
-            System.err.println("pa name: " + pa.getName());
-            System.err.println("Read: " + pa.getReadMethod());
-            System.err.println("Write: " + pa.getWriteMethod());
-            // XK: bad idea?
-            final String name = pa.getName().substring(0, 1).toLowerCase() + pa.getName().substring(1);
-            if (!res.containsKey(name)) {
-                res.put(name, pa);
+        for (Field f : tClass.getDeclaredFields()) {
+            final int modifier = f.getModifiers();
+            if (Modifier.isStatic(modifier)) {
+                continue;
+            }
+            String name = f.getName();
+            
+            if(mcoll.containsKey(name)){
+                mcoll.get(name).addField(f);
             } else {
-                res.get(name).updateMissing(pa);
+                mcoll.put(name, new PropertyAccessor(f) );
             }
         }
 
-        return Collections.unmodifiableList(new ArrayList<ExtPropertyAccessor>(res.values()));
-
-    }
-
-    private static List<ExtPropertyAccessor> introspectInternal(Class<?> tClass) {
-        final Map<String, ExtPropertyAccessor> mcoll = new HashMap<>();
-
-        try {
-            mcoll.putAll(
-                Arrays.asList(Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
-                        .stream()
-                        .map(pd -> {
-                            try {
-                                ExtPropertyAccessor pa = new ExtPropertyAccessor(pd.getName());
-                                LOG.finest("A) set read method " +pd.getReadMethod());
-                                pa.setReadMethod(pd.getReadMethod());
-                                LOG.finest("A) set write method " +pd.getWriteMethod());
-                                pa.setWriteMethod(pd.getWriteMethod());
-                                return pa;
-                            } catch (Exception ex) {
-                                return null;
-                            }
-                        })
-                        .filter(Objects::nonNull)
-                        .collect(Collectors.toMap(pa -> pa.getName(), pa -> pa))
-            );
-            
-        } catch (IntrospectionException ex) {
-            LOG.log(Level.SEVERE, "intorspection failed, try to go ahead without Bean introspection" , ex);
-        }
-
-        HashSet<String> beanInfoProps = new HashSet<String>(mcoll.keySet());
-
+        
         // TODO: test this part and change the logic
         for (Method m : tClass.getDeclaredMethods()) {
             if (Modifier.isPublic(m.getModifiers()) && !Modifier.isStatic(m.getModifiers())) {
@@ -466,76 +487,58 @@ public class ReflectUtil {
                     if (propName.length() == 0) {
                         continue;
                     }
-
+                    propName = propName.substring(0,1).toLowerCase() + propName.substring(1);
                     final String prefix = matcher.group(1);
                     int methodType;
 
+                    Class<?> type;
+
                     if (prefix.equals("set") && m.getParameterTypes().length == 1 && m.getReturnType().equals(Void.TYPE)) {
                         methodType = 1;
+                        type = m.getParameterTypes()[0];
                     } else if (prefix.equals("get") && m.getParameterTypes().length == 0 && !m.getReturnType().equals(Void.TYPE)) {
+                        type = m.getReturnType();
                         methodType = 2;
                     } else if (prefix.equals("is") && m.getParameterTypes().length == 0 && m.getReturnType().equals(Boolean.TYPE)) {
                         methodType = 3;
+                        type = Boolean.TYPE;
                     } else {
                         continue;
                     }
 
-                    if (!beanInfoProps.contains(propName)) {
-                        final ExtPropertyAccessor prop = new ExtPropertyAccessor(propName);
+                    if (!mcoll.containsKey(propName)) {
+                        final PropertyAccessor prop = new PropertyAccessor(propName, type);
                         if (methodType == 1) {
-                            LOG.finest("b) set write method " +m);
+                            LOG.log(Level.FINEST, "b) set write method {0}", m);
                             prop.setWriteMethod(m);
                         } else {
-                            LOG.finest("b) set read method " +m);
+                            LOG.log(Level.FINEST, "b) set read method {0}", m);
                             prop.setReadMethod(m);
                         }
                         mcoll.put(propName, prop);
-                        continue;
                     } else {
-                        final ExtPropertyAccessor prop = mcoll.get(propName);
 
-                        if (!prop.isWritable() && methodType == 1) {
-                            LOG.finest("c) set write method " +m);
-                            prop.setWriteMethod(m);
-                        } else if (prop.getReadMethod() == null && methodType > 1) {
-                            LOG.finest("c) set read method " +m);
-                            prop.setReadMethod(m);
+                        final PropertyAccessor prop = mcoll.get(propName);
+                        
+                        if (type.equals(prop.getPropertyType() )) {
+                            if (methodType == 1) {
+                                LOG.log(Level.FINEST, "c) set write method {0}", m);
+                                prop.setWriteMethod(m);
+                            } else if (methodType > 1) {
+                                LOG.log(Level.FINEST, "c) set read method {0}", m);
+                                prop.setReadMethod(m);
+                            }
                         }
+
                     }
                 }
             }
         }
 
-        for (Field f : tClass.getDeclaredFields()) {
-            if (Modifier.isStatic(f.getModifiers())) {
-                continue;
-            }
-            int modifier = f.getModifiers();
-            String name = f.getName();
-            Class<?> type = f.getType();
 
-            if (Modifier.isPublic(modifier)) {
-                ExtPropertyAccessor property = mcoll.get(name);
-                property.setPublicField(f);
-            } else {
-                ExtPropertyAccessor property = mcoll.get(name);
-                Class<?> propertyType;
-                try {
-                    propertyType = property.getPropertyType();
-                    if (propertyType.equals(type)) {
-                        property.setRelatedField(f);
-                    }
-                } catch (NullPointerException exception) {
-                    // Nur Setter vorhanden, wird unten durch applyFilter aussortiert.
-                }
-            }
-        }
-        return mcoll.values().stream()
-                .filter(pa -> pa.getReadMethod() != null || pa.getPublicField() != null)
-                .collect(Collectors.toUnmodifiableList());
+        return mcoll;
 
     }
-
 
     public static Class<?> resolveGenericType(Class<?> clazz) {
         return resolveGenericType(clazz, 0, Object.class);
@@ -554,20 +557,20 @@ public class ReflectUtil {
         }
 
         try {
-            if (t instanceof ParameterizedType) {
-                return (Class<?>) ((ParameterizedType) t).getRawType();
+            if (t instanceof ParameterizedType parameterizedType) {
+                return (Class<?>) parameterizedType.getRawType();
             }
-            if (t instanceof TypeVariable) {
-            	if (isPrintDebugInfo()) {
-                    System.err.println("T     =" + t);
-                    System.err.println("NAME  =" + ((TypeVariable<?>) t).getName());
-                    System.err.println("BOUNDS=" + Arrays.asList(((TypeVariable<?>) t).getBounds()));
+             if (t instanceof TypeVariable) {
+                if (isPrintDebugInfo()) {
+                    LOG.log(Level.FINEST, "T     =" + t);
+                    LOG.log(Level.FINEST, "NAME  =" + ((TypeVariable<?>) t).getName());
+                    LOG.log(Level.FINEST, "BOUNDS=" + Arrays.asList(((TypeVariable<?>) t).getBounds()));
                     GenericDeclaration gd = ((TypeVariable<?>) t).getGenericDeclaration();
                     System.err.println("GD    =" + gd);
                     for (TypeVariable<?> v : gd.getTypeParameters()) {
-                        System.err.println(v.getClass());
+                        LOG.log(Level.FINEST, "TypeVariable.class=" + v.getClass());
                     }
-            	}
+                }
                 return ((TypeVariable<?>) t).getName().getClass();
             }
             return (Class<?>) t;
@@ -593,7 +596,7 @@ public class ReflectUtil {
     }
 
     public static String camelizeName(String attrName) {
-        
+
 //        // TODO REVIEW PROPOSAL
 //        if (attrName == null || attrName.contains("_") ) {
 //            return attrName;
@@ -606,9 +609,7 @@ public class ReflectUtil {
 //            sbuild.append( Character.toUpperCase( str.charAt(0) ) ).append( str.substring(1) );
 //        }
 //        return sbuild.toString();
-        
-
-        if (attrName == null ) {
+        if (attrName == null) {
             throw new IllegalArgumentException("attrName cannot be null");
         }
         if (attrName.contains("_")) {
@@ -625,7 +626,7 @@ public class ReflectUtil {
                     sb.append(Character.toUpperCase(c));
                     lastWasUnderScore = false;
                 } else if (isFirstChar) {
-                    sb.append( Character.toLowerCase(c) );
+                    sb.append(Character.toLowerCase(c));
                 } else {
                     sb.append(c);
                 }
@@ -651,12 +652,12 @@ public class ReflectUtil {
         }
     }
 
-	public static boolean isPrintDebugInfo() {
-		return printDebugInfo;
-	}
+    public static boolean isPrintDebugInfo() {
+        return printDebugInfo;
+    }
 
-	public static void setPrintDebugInfo(boolean printDebugInfo) {
-		ReflectUtil.printDebugInfo = printDebugInfo;
-	}
+    public static void setPrintDebugInfo(boolean printDebugInfo) {
+        ReflectUtil.printDebugInfo = printDebugInfo;
+    }
 
 }

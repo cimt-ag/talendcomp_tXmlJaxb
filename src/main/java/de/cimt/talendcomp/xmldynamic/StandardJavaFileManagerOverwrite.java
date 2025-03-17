@@ -1,6 +1,6 @@
 package de.cimt.talendcomp.xmldynamic;
 
-import javax.tools.*;
+//import javax.tools.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,12 +14,17 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileManager.Location;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 
 public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileManager<StandardJavaFileManager> implements StandardJavaFileManager {
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
 
     private List<String> listEntries(File jar) throws IOException {
-        List<String> classNames = new ArrayList<String>();
+        List<String> classNames = new ArrayList<>();
         ZipInputStream zip = new ZipInputStream(new FileInputStream( jar ));
         for (ZipEntry entry = zip.getNextEntry(); entry != null; entry = zip.getNextEntry()) {
             if (!entry.isDirectory() && entry.getName().endsWith(".class")) {
@@ -44,7 +49,7 @@ public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileMa
 
         if(packageName.equals("de.cimt.talendcomp.xmldynamic")){
             classes = new String[]{
-                    "de/cimt/talendcomp/xmldynamic/ExtPropertyAccessor.class",
+                    "de/cimt/talendcomp/xmldynamic/PropertyAccessor.class",
                     "de/cimt/talendcomp/xmldynamic/InlineSchemaPlugin$1.class",
                     "de/cimt/talendcomp/xmldynamic/InlineSchemaPlugin$2.class",
                     "de/cimt/talendcomp/xmldynamic/InlineSchemaPlugin$3.class",
