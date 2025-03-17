@@ -1,6 +1,6 @@
 package de.cimt.talendcomp.xmldynamic;
 
-import javax.tools.*;
+//import javax.tools.*;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -14,6 +14,11 @@ import java.util.logging.Logger;
 import java.util.stream.Collectors;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileManager.Location;
+import javax.tools.JavaFileObject;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 
 public final class StandardJavaFileManagerOverwrite extends ForwardingJavaFileManager<StandardJavaFileManager> implements StandardJavaFileManager {
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
