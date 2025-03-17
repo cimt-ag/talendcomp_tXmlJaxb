@@ -43,6 +43,7 @@ import com.sun.xml.xsom.XSTerm;
 
 import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
 import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
+import java.util.HashMap;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -100,12 +101,12 @@ public class InlineSchemaPlugin extends Plugin {
         "    public boolean isMember(javax.xml.namespace.QName qn){\n" +
         "        return find(qn)!=null;\n" +
         "    }\n" ;
-    
-    
+                  
+                      
     public static final QName PNS = new QName("http://xsd.cimt.de/plugins/inline", "_cisp", "_cisp");
     private static final Logger LOG = Logger.getLogger("de.cimt.talendcomp.xmldynamic");
-    StringBuilder clazzes=new StringBuilder();
-    
+    StringBuilder clazzes = new StringBuilder();
+
     @Override
     public String getOptionName() {
         return PNS.getLocalPart();
@@ -113,7 +114,7 @@ public class InlineSchemaPlugin extends Plugin {
 
     @Override
     public String getUsage() {
-        return "handle with care. Ask Daniel ;-)";
+        return "handle with care. ";
     }
 
     @Override
@@ -128,33 +129,34 @@ public class InlineSchemaPlugin extends Plugin {
 
             model.rootClass = refObject;
 
-            Map<JPackage, JArray> e = new AutoMap<JPackage, JArray>(){
+            Map<JPackage, JArray> e = new HashMap<JPackage, JArray>() {
                 @Override
-                public JArray create(JPackage p) {
-                    return JExpr.newArray(refClass.narrow(refObject));
+                public JArray get(Object key) {
+                    return computeIfAbsent(((JPackage) key), c -> JExpr.newArray(refClass.narrow(refObject)));
                 }
             };
-            Map<JPackage, JArray> t = new AutoMap<JPackage, JArray>(){
+
+            Map<JPackage, JArray> t = new HashMap<JPackage, JArray>() {
                 @Override
-                public JArray create(JPackage p) {
-                    return JExpr.newArray(refClass.narrow(refObject));
+                public JArray get(Object key) {
+                    return computeIfAbsent(((JPackage) key), c -> JExpr.newArray(refClass.narrow(refObject)));
                 }
             };
-            Map<JPackage, JArray> n = new AutoMap<JPackage, JArray>(){
+            Map<JPackage, JArray> n = new HashMap<JPackage, JArray>() {
                 @Override
-                public JArray create(JPackage p) {
-                    return JExpr.newArray(refString);
+                public JArray get(Object key) {
+                    return computeIfAbsent(((JPackage) key), c -> JExpr.newArray(refString));
                 }
-            };           
-            Map<JPackage, Set<String>> namespaces = new AutoMap<JPackage, Set<String>>(){
+            };
+            Map<JPackage, Set<String>> namespaces = new HashMap<JPackage, Set<String>>() {
                 @Override
-                public Set<String> create(JPackage p) {
-                    return new HashSet<String>();
+                public Set<String> get(Object key) {
+                    return computeIfAbsent(((JPackage) key), c -> new HashSet<String>());
                 }
             };
             Set<JPackage> packages = new HashSet<JPackage>();
             for (Map.Entry<NClass, CClassInfo> beanset : model.beans().entrySet()) {
-                
+
                 CClassInfo bean = beanset.getValue();
                 final JPackage ownerPackage = bean.getOwnerPackage();
                 packages.add(ownerPackage);
@@ -169,9 +171,9 @@ public class InlineSchemaPlugin extends Plugin {
                     t.get(ownerPackage).add(JExpr.dotclass(model.codeModel.ref(bean.fullName())));
                 }
             }
-            
-            StringBuilder sbuild=new StringBuilder(); 
-            for(JPackage pack : packages){
+
+            StringBuilder sbuild = new StringBuilder();
+            for (JPackage pack : packages) {
                 model.rootClass = refObject;
 
                 final String ctx = "GenXS" + UUID.randomUUID().toString().replaceAll("[:\\.-]+", "");
@@ -199,18 +201,17 @@ public class InlineSchemaPlugin extends Plugin {
                 meth = clazz.method(JMod.PUBLIC, refString.array(), "getNamespaces");
                 meth.annotate(java.lang.Override.class);
                 meth.body()._return(n.get(pack));
-                
-                clazz.direct( CODEFRAGMENT );
-                sbuild.append( clazz.fullName() ).append("\n");
-               
+
+                clazz.direct(CODEFRAGMENT);
+                sbuild.append(clazz.fullName()).append("\n");
+
             }
 
-
             JTextFile jrf = (JTextFile) model.codeModel._package("META-INF.services").addResourceFile(new JTextFile("de.cimt.talendcomp.xmldynamic.TXMLBinding"));
-            jrf.setContents( sbuild.toString() );//clazz.fullName());
+            jrf.setContents(sbuild.toString());//clazz.fullName());
 
         } catch (JClassAlreadyExistsException ex) {
-        	LOG.log(Level.SEVERE,"JClassAlreadyExistsException", ex);
+            LOG.log(Level.SEVERE, "JClassAlreadyExistsException", ex);
         }
 
     }
@@ -221,44 +222,45 @@ public class InlineSchemaPlugin extends Plugin {
     }
 
     /**
-     * this method is used to gerenrate qnamerefs for each property of a class. if a collection
-     * is found all possible members are added.
+     * this method is used to gerenrate qnamerefs for each property of a class.
+     * if a collection is found all possible members are added.
+     *
      * @param component current definition
      * @param parent annotation to be filled
      * @param outline current working outline
      * @param ref list of possible elements
      */
     private void annotateType(XSComponent component, JAnnotationArrayMember parent, Outline outline, List<? extends CTypeInfo> ref) {
-    	if (ref.isEmpty()) {
-    		return; // get value does not support type annotations
-    	}
-        if ( XSAttributeUse.class.isAssignableFrom(component.getClass()) ) {
+        if (ref.isEmpty()) {
+            return; // get value does not support type annotations
+        }
+        if (XSAttributeUse.class.isAssignableFrom(component.getClass())) {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("uri", ((XSAttributeUse) component).getDecl().getTargetNamespace());
             annotate.param("name", ((XSAttributeUse) component).getDecl().getName());
-             
+
             annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
             annotate.param("attribute", true);
             return;
         }
-        if ( XSElementDecl.class.isAssignableFrom(component.getClass()) ) {
+        if (XSElementDecl.class.isAssignableFrom(component.getClass())) {
             JAnnotationUse annotate = parent.annotate(QNameRef.class);
             annotate.param("name", ((XSElementDecl) component).getName());
             annotate.param("type", ref.get(0).toType(outline, Aspect.EXPOSED));
             annotate.param("uri", ((XSElementDecl) component).getTargetNamespace());
             return;
         }
-        if ( XSParticle.class.isAssignableFrom(component.getClass()) ) {
+        if (XSParticle.class.isAssignableFrom(component.getClass())) {
             XSTerm term = ((XSParticle) component).getTerm();
-            if ( term.isElementDecl() ) {
+            if (term.isElementDecl()) {
                 annotateType(term.asElementDecl(), parent, outline, ref);
-                return; 
+                return;
             }
-            
+
             if (term.isModelGroupDecl()) {
                 term = term.asModelGroupDecl();
             }
-            if ( term.isModelGroup() ) {
+            if (term.isModelGroup()) {
                 int i = 0;
                 for (XSParticle child : term.asModelGroup().getChildren()) {
                     annotateType(child, parent, outline, ref.subList(i++, ref.size()));
@@ -266,10 +268,10 @@ public class InlineSchemaPlugin extends Plugin {
             }
         }
     }
-    
+
     @Override
     public boolean run(Outline otln, Options optns, ErrorHandler eh) throws SAXException {
-        
+
         for (ClassOutline co : otln.getClasses()) {
             for (CPropertyInfo property : co.target.getProperties()) {
                 JFieldVar field = co.implClass.fields().get(property.getName(false));
@@ -280,11 +282,10 @@ public class InlineSchemaPlugin extends Plugin {
                 if (property.isCollection()) {
                     annotate.param("collection", true);
                 }
-                annotateType(property.getSchemaComponent(), annotate.paramArray("refs"), otln, new ArrayList<CTypeInfo>(property.ref()) );
+                annotateType(property.getSchemaComponent(), annotate.paramArray("refs"), otln, new ArrayList<CTypeInfo>(property.ref()));
             }
         }
         return true;
     }
 
-    
 }

@@ -8,8 +8,6 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import javax.tools.*;
-
 import org.xml.sax.SAXParseException;
 
 import com.sun.codemodel.JClass;
@@ -25,6 +23,10 @@ import com.sun.tools.xjc.util.ErrorReceiverFilter;
 import java.net.URI;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javax.tools.ToolProvider;
+import javax.tools.JavaCompiler;
+import javax.tools.StandardJavaFileManager;
+import javax.tools.StandardLocation;
 
 /**
  * Builds a {@link Model} object.

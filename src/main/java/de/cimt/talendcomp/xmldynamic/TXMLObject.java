@@ -21,12 +21,9 @@ import jakarta.xml.bind.Unmarshaller;
 import jakarta.xml.bind.annotation.XmlAccessType;
 import jakarta.xml.bind.annotation.XmlAccessorType;
 import jakarta.xml.bind.annotation.XmlTransient;
+import java.util.Map.Entry;
 import javax.xml.datatype.XMLGregorianCalendar;
 
-import de.cimt.talendcomp.xmldynamic.annotations.QNameRef;
-import de.cimt.talendcomp.xmldynamic.annotations.TXMLTypeHelper;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 /**
  * This class represents the base class for the generated jax-b classes
@@ -59,48 +56,14 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     	
     }
 
-    private ExtPropertyAccessor getPropertyAccessorByName(String attr){
-        final Collection<ExtPropertyAccessor> props = CACHE.get(this.getClass()).values();
-        if(LOG.isLoggable(Level.FINEST))
-            props.stream().forEach( p -> LOG.finest("\n*********************************\n"+p) );
-        
-        ExtPropertyAccessor pa= props.stream()
-                    .filter( e -> e.getName().equalsIgnoreCase(attr) )
-                    .findFirst().orElse(null);
-        if(pa!=null)
-            return pa;
-        
-        /*
-            Handle Collections like:
-            @TXMLTypeHelper(collection = true, refs = {
-                @QNameRef(name = "address", type = Customer.Address.class, uri = "http://cimt.de/customer/"),
-                @QNameRef(name = "poaddress", type = Customer.Poaddress.class, uri = "http://cimt.de/customer/")
-            })
-            protected List<de.cimt.customer.Address> addressOrPoaddress;
-        */
-        
-        for(ExtPropertyAccessor pp : props){
-            final TXMLTypeHelper th = pp.findAnnotation(TXMLTypeHelper.class);
-            if(th==null)
-                continue;
-            for(QNameRef ref : th.refs()){
-                if(ref.name().equalsIgnoreCase(attr))
-                    return pp;
-            }
-        }
-
-        return null;
-    }
+    private PropertyAccessor getPropertyAccessorByName(String attr){
+        return ReflectUtil.introspectName(this.getClass()).entrySet().stream()
+                .filter( entry -> entry.getKey().equalsIgnoreCase(attr))
+                .map( entry -> entry.getValue())
+                .findFirst()
+                .orElse( null );
+    } 
     
-    @XmlTransient
-    private static final Map<Class<?>, Map<String, ExtPropertyAccessor>> CACHE = new AutoMap<Class<?>, Map<String, ExtPropertyAccessor>>(){
-        @Override
-        public synchronized Map<String, ExtPropertyAccessor> create(Class<?> key) {
-            return ReflectUtil.introspect(key, Object.class).stream()
-                    .collect( Collectors.toMap(pa -> pa.getName(), pa -> pa));
-        }
-    };
- 
     @XmlTransient
     private Pair<Class<? extends TXMLObject>, Object> _xmlParentBinding;
 
@@ -145,7 +108,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
            return false;
         }
         
-    	ExtPropertyAccessor attr = findFirstyAccessorByType(childObject.getClass());
+    	PropertyAccessor attr = findFirstyAccessorByType(childObject.getClass());
     	if (attr == null) {
             LOG.finer("no property found in class "+getClass().getName()+ " matching type " +childObject.getClass().getName() );
             return false;
@@ -160,29 +123,16 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        PropertyAccessor pa = getPropertyAccessorByName(attr);
         if(pa==null){
             return false;
         }
-        System.err.println("Property Type: " + pa.getPropertyType());
-        if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
-            return internalSet(pa , getCollectionTargetType(pa, attr), value);
-        }
+        LOG.log(Level.FINER,"Property Type: {0}",pa.getPropertyType());
         return internalSet(pa, pa.getPropertyType(), value);
     }
     
-    private Class<?> getCollectionTargetType(final ExtPropertyAccessor accessor, final String name){
-        
-        final TXMLTypeHelper anno = accessor.findAnnotation(TXMLTypeHelper.class);
-        if(anno==null)
-            return Object.class;
-        
-        return Stream.of( anno.refs() ).filter( ref -> ref.name().equalsIgnoreCase(name) ).map( ref -> ref.type() ).findFirst().orElse(null);
-    }
-    
-    private boolean internalSet(ExtPropertyAccessor pa, Class<?> type, Object value){
-        LOG.finer("internalSet "+pa.getName()+" to type "+type+" value="+value);
-        //System.err.println("internalSet "+pa.getName()+" to type "+type+" value="+value);
+    private boolean internalSet(PropertyAccessor pa, Class<?> type, Object value){
+        LOG.log(Level.FINER, "internalSet {0} to type {1} value={2}", new Object[]{pa.getName(), type, value});
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
@@ -191,14 +141,15 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             ((Collection) pa.getPropertyValue(this)).clear();
             return internalAdd(pa, type, value);
         }
-        LOG.finer("convert "+value+" to type "+type);
+        LOG.log(Level.FINER, "convert {0} to type {1}", new Object[]{value, type});
         // happens here
         System.err.println("this class: " + this.getClass().getName());
         pa.setPropertyValue(this, ReflectUtil.convert(value, type));
         return true;
     }
-   private boolean internalAdd(ExtPropertyAccessor pa, Class<?> type, Object value){
-        LOG.finer("internalAdd "+pa.getName()+" to type "+type+" value="+value);
+    
+    private boolean internalAdd(PropertyAccessor pa, Class<?> type, Object value){
+        LOG.log(Level.FINER, "internalAdd {0} to type {1} value={2}", new Object[]{pa.getName(), type, value});
         /**
          * jaxb never generates setter for collections, so set must be get and
          * add....
@@ -219,14 +170,14 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-        return CACHE.get(this.getClass()).get(attr).getPropertyType();
+        return findFirstyAccessorByName(attr).getPropertyType();
     }
 
     public Object get(String attr) {
         if (attr == null || attr.trim().isEmpty()) {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
-        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        PropertyAccessor pa = getPropertyAccessorByName(attr);
         if (pa == null) {
             return new MissingAttribute(attr);
         }
@@ -242,7 +193,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
     	//attr = ReflectUtil.camelizeName(attr);
-        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        PropertyAccessor pa = getPropertyAccessorByName(attr);
         Object value = null;
         if (pa == null) {
             if (ignoreMissing == false) {
@@ -262,7 +213,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
             throw new IllegalArgumentException("attribute name cannot be null or empty!");
         }
         int size = 0;
-        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        PropertyAccessor pa = getPropertyAccessorByName(attr);
         if (Collection.class.isAssignableFrom(pa.getPropertyType())) {
             Object currentValue = pa.getPropertyValue(this);
             size = ((Collection<?>) currentValue).size();
@@ -278,7 +229,7 @@ public abstract class TXMLObject implements Serializable, Cloneable {
         }
     	//attr = ReflectUtil.camelizeName(attr);
         System.err.println("orginial attr: " + attr);
-        ExtPropertyAccessor pa = getPropertyAccessorByName(attr);
+        PropertyAccessor pa = getPropertyAccessorByName(attr);
         if (pa == null) {
             if (attr.indexOf("/") > 0) {
                 try {
@@ -319,96 +270,51 @@ public abstract class TXMLObject implements Serializable, Cloneable {
     }
 
     public Set<String> getNames() {
-        return CACHE.get(this.getClass()).keySet();
+        return ReflectUtil.introspectName( this.getClass() ).keySet();
     }
 
     public String findFirstPropertyByType(Class<? extends TXMLObject> clazz) {
-        for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
-            TXMLTypeHelper typeHelper=pa.findAnnotation(TXMLTypeHelper.class);
-            if(typeHelper!=null){
-                for(QNameRef ref : typeHelper.refs()){
-                    if(clazz.equals(ref.type()))
-                        return pa.getName();
-                }
-            } else {
-                if( pa.getPropertyType().equals(clazz) ){
-                    return pa.getName();
-                }
-                        
-            }
-        }
-        return null;
+        PropertyAccessor pa=findFirstyAccessorByType(clazz);
+        return pa!=null ? pa.getName() : null;
     }
     
-    private ExtPropertyAccessor findFirstyAccessorByType(Class<? extends TXMLObject> clazz) {
-        for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
-            TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
-            
-            if(eth!=null){ 
-                for(  QNameRef ref : eth.refs() ){
-                    if(ref.type().equals(clazz)){
-                        return pa;
-                    }
-                }
-            } else {
-                if (pa.getPropertyType().equals(clazz)) {
-                    return pa;
-                }
-            }
+    private PropertyAccessor findFirstyAccessorByType(Class<? extends TXMLObject> clazz) {
+        for (PropertyAccessor pa : ReflectUtil.introspect(this.getClass()) ) {
+            if( pa.getAnnotatedTypes().contains(clazz ) )
+                return pa;
         }
         return null;
-    }
-    
-    private Pair<ExtPropertyAccessor, Class<?>> findFirstyAccessorByElementName(String name) {
-        
-        for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
-            TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
-            
-            if(eth!=null){ 
-                for(  QNameRef ref : eth.refs() ){
-                    if(ref.name().equals(name)){
-                        return new Pair<ExtPropertyAccessor, Class<?>>(pa, ref.type());
-                    }
-                }
-            }
-        }
-        return null;
-    }
-    
-/*    
-    private ExtPropertyAccessor findFirstyAccessorByElementQName(QName fqname) {
-        for (ExtPropertyAccessor pa : CACHE.get(this.getClass()).values()) {
-            TXMLTypeHelper eth = pa.findAnnotation(TXMLTypeHelper.class);
-            if(eth!=null){ // check property annotation for registered element classes
-                for( QNameRef ref : eth.refs()){
-                    if(ref.name().equals(fqname.getLocalPart()) && ref.uri().equals(fqname.getNamespaceURI()))
-                        return pa;
-                }
-            }
-        }
-        return null;
-    }
-*/
 
-    private boolean childAddOrSet(String path, Object childvalue) throws Exception{
+    }
+    
+    private PropertyAccessor findFirstyAccessorByName(String name) {
+        for (Entry<String, PropertyAccessor> pa : ReflectUtil.introspectName(this.getClass()).entrySet() ) {
+            if( pa.getKey().equalsIgnoreCase(name) )
+                return pa.getValue();
+        }
+        return null;
+    }
+
+    private boolean childAddOrSet(final String path, Object childvalue) throws Exception{
         int pos=path.indexOf("/");
         if (pos < 0) {
             // this should be handles somewhere else
-            return false;
+            return addOrSet(path, childvalue);
         } 
         
-        final Pair<ExtPropertyAccessor, Class<?>> pa = findFirstyAccessorByElementName( path.substring(0, pos) );
-        if (pa == null) {
-            throw new IllegalArgumentException("unresolveable path "+path+" for class "+this.getClass().getName() );
-        }
-        if (TXMLObject.class.isAssignableFrom(pa.y) == false) {
+//        final Pair<PropertyAccessor, Class<?>> pa = findFirstyAccessorByElementName( path.substring(0, pos) );
+        PropertyAccessor p=ReflectUtil.introspectName( getClass() ).entrySet().stream()
+                .filter( es-> es.getKey().equalsIgnoreCase( path.substring(0, pos) ) )
+                .map( es -> es.getValue() )
+                .findFirst().orElseThrow();
+        
+        if ( !TXMLObject.class.isAssignableFrom( p.getPropertyType() ) ) {
+            p.setPropertyValue(childvalue, childvalue);
             throw new IllegalArgumentException("unresolveable path "+path+". Referring Element type does not support nested content");
         }
-        TXMLObject child=(TXMLObject) pa.y.getConstructor().newInstance();
-        this.addOrSet( child );
-        
-        child.addOrSet(path.substring(pos+1), childvalue);
-        return true;
+        TXMLObject child=(TXMLObject)  p.getPropertyType().getConstructor().newInstance();
+        addOrSet( child );
+        return child.childAddOrSet(path.substring(pos+1), childvalue);
     }
     
 //    @SuppressWarnings({ "rawtypes", "unchecked" })
