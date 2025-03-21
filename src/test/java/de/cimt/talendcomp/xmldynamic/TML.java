@@ -32,8 +32,13 @@ public class TML {
         mb.generate();
         mb.load();
 
+        TXMLObject comp=Util.createTXMLObject("de.cimt.customer.Company");
         TXMLObject c=Util.createTXMLObject("de.cimt.customer.Customer");
-
+        c.set("_Lastname", "bla");
+        comp.addOrSet(c);
+        c=Util.createTXMLObject("de.cimt.customer.Customer");
+        c.set("lastname", "blaas");
+        comp.addOrSet(c);
         Iterator<TXMLBinding> iter=Util.load();
         while(iter.hasNext()){
             final TXMLBinding next = iter.next();
@@ -43,7 +48,7 @@ public class TML {
             TXMLObject add=Util.createTXMLObject("de.cimt.customer.Customer$Address") ;
             c.addOrSet(add);
         }
-        System.out.println( c.toXML() );
+        System.out.println( comp.toXML() );
     }
 
     public static void play_input() throws Exception {
