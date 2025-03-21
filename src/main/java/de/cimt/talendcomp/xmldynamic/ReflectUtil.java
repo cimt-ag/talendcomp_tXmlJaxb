@@ -339,41 +339,41 @@ public class ReflectUtil {
         return null;
     }
 // </editor-fold>
+//
+//    public Stream<Field> getAllFields(Class<?> c) {
+//        return getAllFields(c, TXMLObject.class);
+//    }
+//
+//    public Stream<Field> getAllFields(Class<?> c, Class<?> stopclass) {
+//        if (c == null || c.equals(stopclass)) {
+//            return Stream.empty();
+//        }
+//
+//        return Stream.concat(
+//                Arrays.stream(c.getDeclaredFields()).filter(f -> !Modifier.isStatic(f.getModifiers())), getAllFields(c.getSuperclass(), stopclass)
+//        );
+////                .filter( f -> !Modifier.isStatic(f.getModifiers())) ;
+//    }
 
-    public Stream<Field> getAllFields(Class<?> c) {
-        return getAllFields(c, Object.class);
-    }
-
-    private Stream<Field> getAllFields(Class<?> c, Class<?> stopclass) {
-        if (c == null || c.equals(stopclass)) {
-            return Stream.empty();
-        }
-
-        return Stream.concat(
-                Arrays.stream(c.getDeclaredFields()).filter(f -> !Modifier.isStatic(f.getModifiers())), getAllFields(c.getSuperclass(), stopclass)
-        );
-//                .filter( f -> !Modifier.isStatic(f.getModifiers())) ;
-    }
-
-    public static <T extends Annotation> T getClassAnnotation(Class<?> cl, Class<T> anno) {
-        return cl.getAnnotation(anno);
-    }
-
-    public static <T extends Annotation> Method findAnnotatedMethod(Class<?> type, Class<T> anno) {
-        if (type == null || anno == null) {
-            return null;
-        }
-        for (Method m : type.getDeclaredMethods()) {
-            if (!Modifier.isPublic(m.getModifiers()) || m.getAnnotation(anno) == null) {
-                continue;
-            }
-            return m;
-        }
-        if (type.getSuperclass() == null) {
-            return null;
-        }
-        return findAnnotatedMethod(type.getSuperclass(), anno);
-    }
+//    public static <T extends Annotation> T getClassAnnotation(Class<?> cl, Class<T> anno) {
+//        return cl.getAnnotation(anno);
+//    }
+//
+//    public static <T extends Annotation> Method findAnnotatedMethod(Class<?> type, Class<T> anno) {
+//        if (type == null || anno == null) {
+//            return null;
+//        }
+//        for (Method m : type.getDeclaredMethods()) {
+//            if (!Modifier.isPublic(m.getModifiers()) || m.getAnnotation(anno) == null) {
+//                continue;
+//            }
+//            return m;
+//        }
+//        if (type.getSuperclass() == null) {
+//            return null;
+//        }
+//        return findAnnotatedMethod(type.getSuperclass(), anno);
+//    }
 
     private static final Map<Class<?>, List<PropertyAccessor>> CACHE = new HashMap<>() {
         @Override
@@ -411,6 +411,7 @@ public class ReflectUtil {
         }
         return result;
     }
+    
     /**
      * Introspect a given class and find all accessible properties by name
      *
@@ -433,9 +434,9 @@ public class ReflectUtil {
         
         
         final Map<String, PropertyAccessor> mcoll = introspectInternal( tClass.getSuperclass() );
-        System.err.println(" present in class "+tClass.getSimpleName()+":\n" +
-        mcoll.entrySet().stream().map( p -> ( p.getKey() + ":" + p.getValue() ) ).collect( Collectors.joining("\n"))
-                +"\n\n");
+//        System.err.println(" present in class "+tClass.getSimpleName()+":\n" +
+//        mcoll.entrySet().stream().map( p -> ( p.getKey() + ":" + p.getValue() ) ).collect( Collectors.joining("\n"))
+//                +"\n\n");
         
         try {
             Arrays.stream(Introspector.getBeanInfo(tClass, tClass.getSuperclass()).getPropertyDescriptors())
@@ -557,8 +558,8 @@ public class ReflectUtil {
         }
 
         try {
-            if (t instanceof ParameterizedType parameterizedType) {
-                return (Class<?>) parameterizedType.getRawType();
+            if (t instanceof ParameterizedType ) {
+                return (Class<?>) ((ParameterizedType) t).getRawType();
             }
              if (t instanceof TypeVariable) {
                 if (isPrintDebugInfo()) {
@@ -566,7 +567,6 @@ public class ReflectUtil {
                     LOG.log(Level.FINEST, "NAME  =" + ((TypeVariable<?>) t).getName());
                     LOG.log(Level.FINEST, "BOUNDS=" + Arrays.asList(((TypeVariable<?>) t).getBounds()));
                     GenericDeclaration gd = ((TypeVariable<?>) t).getGenericDeclaration();
-                    System.err.println("GD    =" + gd);
                     for (TypeVariable<?> v : gd.getTypeParameters()) {
                         LOG.log(Level.FINEST, "TypeVariable.class=" + v.getClass());
                     }

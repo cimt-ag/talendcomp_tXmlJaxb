@@ -89,9 +89,9 @@ public final class Util {
         }
         LOG.fine("--------------------");
         LOG.fine(classLoader.toString());
-        if (classLoader instanceof URLClassLoader ucl) {
+        if (classLoader instanceof URLClassLoader ) {
             int i = 0;
-            for (URL url : ucl.getURLs()) {
+            for (URL url : ((URLClassLoader) classLoader).getURLs()) {
                 LOG.log(Level.INFO, "url[{0}]={1}", new Object[]{i++, url});
             }
             

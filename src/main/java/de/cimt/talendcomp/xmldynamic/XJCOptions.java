@@ -87,7 +87,7 @@ public class XJCOptions extends Options implements AutoCloseable{
             }
             versionString = manifest.getMainAttributes().getValue("Implementation-Version");
         } catch (  Throwable t) {
-            t.printStackTrace();
+            LOG.info("unable to read latest version of this Plugin from jar manifest");
         }
         VERSION = versionString;
         LASTUPDATE = d;
