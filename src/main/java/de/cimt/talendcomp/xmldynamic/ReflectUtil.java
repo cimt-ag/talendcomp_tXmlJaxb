@@ -391,7 +391,7 @@ public class ReflectUtil {
      * @param tClass the class
      * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
      */
-    static List<PropertyAccessor> introspect(Class<?> tClass ) {
+    public static List<PropertyAccessor> introspect(Class<?> tClass ) {
         
         return Collections.unmodifiableList(  CACHE.get(tClass)  );
     }
@@ -402,7 +402,7 @@ public class ReflectUtil {
      * @param tClass the class
      * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
      */
-    static Map<String, PropertyAccessor> introspectName(Class<?> tClass) {
+    public static Map<String, PropertyAccessor> introspectName(Class<?> tClass) {
 
         final Map<String, PropertyAccessor> result = CACHE.get(tClass).stream().collect(Collectors.toMap(pa -> pa.getName(), pa2 -> pa2));
 
@@ -418,7 +418,7 @@ public class ReflectUtil {
      * @param tClass the class
      * @return a list of {@link org.colllib.introspect.PropertyAccessor} objects
      */
-    static Map<Class<?>, PropertyAccessor> introspectType(Class<?> tClass ) {
+    public static Map<Class<?>, PropertyAccessor> introspectType(Class<?> tClass ) {
         
         final Map<Class<?>, PropertyAccessor> result =   CACHE.get(tClass).stream().collect( Collectors.toMap( pa  -> pa.getPropertyType(), pa2 -> pa2) );
         
@@ -428,7 +428,7 @@ public class ReflectUtil {
         return result;
     }
 
-    public static Map<String, PropertyAccessor> introspectInternal(Class<?> tClass) {
+    protected static Map<String, PropertyAccessor> introspectInternal(Class<?> tClass) {
         if(Object.class.equals(tClass) || TXMLObject.class.equals(tClass) || tClass==null)
             return new HashMap<>();
         
